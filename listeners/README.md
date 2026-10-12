@@ -63,6 +63,62 @@ catch-up (over `MAX_FAILED_SCAN_BLOCKS`, default 300) rather than firing thousan
 Request cost, measured: gemba at a 20 s poll is ~42 calls/min against his own nodes; Sepolia at
 90 s is **8 calls/min** — fewer than the two-call version made at 60 s.
 
+## Staying alive, and knowing when it is not
+
+Four separate mechanisms, because each covers a failure the others cannot see.
+
+**1 · The endpoint list wraps round, three times.** `withProvider` makes up to **three complete
+passes** over every endpoint. The first pass respects the per-endpoint cooldown; later passes
+ignore it, which is what makes the list genuinely wrap back to the first endpoint instead of
+stalling once everything is parked. Measured: two endpoints, three rounds, six attempts.
+
+**2 · Then it stops, rather than looping.** When all three rounds fail, the listener does **not**
+keep retrying at its poll cadence — hammering dead endpoints every 20 seconds fills the journal
+and can get it rate-limited exactly when it needs to come back. It backs off for
+`backoffMs` (15 minutes by default), sends one loud email, and retries. It keeps its block
+position throughout, so nothing between there and the chain head is lost.
+
+**3 · systemd restarts a process that exits.** `Restart=always`, `RestartSec=15`.
+
+**4 · A watchdog restarts a process that HANGS.** This is the one systemd cannot do.
+`Restart=always` catches a process that exits; it does nothing about one still running and no
+longer working — a wedged socket, a promise that never settles. To systemd that process is
+healthy; to the wallet it is gone.
+
+So the test is not "is it running" but "did it poll recently". Every cycle writes `lastPollAt`
+into its state file, and `listeners/watchdog.js` — a short-lived process on its own 5-minute
+timer, deliberately not a thread inside the listener, since a watchdog sharing a process dies
+with it — restarts anything that has not polled for `max(5 × pollMs, 5 min)` and emails what it
+did.
+
+Both paths were tested on the real box rather than reasoned about:
+
+| test | what happened |
+|---|---|
+| listener stopped (`systemctl stop`) | watchdog: `unit inactive` → restarted → emailed |
+| listener **hung** (`SIGSTOP`) | systemd still reported `active`; watchdog saw `last poll 350s ago` against a 300 s threshold → `HUNG: restarted` → emailed → caught up from block 4003395 to 4003584 |
+
+```bash
+node listeners/watchdog.js --dry-run     # report, change nothing, send nothing
+systemctl list-timers 'personal-wallet-*'
+```
+
+## What gets emailed
+
+| event | when |
+|---|---|
+| wallet events, plain arrivals, refused transactions | every cycle that finds something |
+| **no RPC is answering** | once, when all three rounds fail; the listener pauses |
+| recovered | once, when it reads the chain again after failing |
+| RPC failures and endpoint switches | aggregated, at most one digest every 30 minutes |
+| listener **stopped** | on a clean shutdown — a listener that goes quiet is indistinguishable from one that is fine |
+| watchdog restarted something | whenever it had to act |
+
+Endpoint switching is normal, successful behaviour; it is reported so a provider that is quietly
+degrading becomes visible, not because anything is broken. The digest is rate-limited so a
+flapping endpoint cannot turn the alerting into a flood — the same reasoning that caps unknown
+token arrivals at three per email.
+
 ## Capability, as distinct from health
 
 An endpoint can be perfectly alive and refuse one kind of call. `publicnode` serves

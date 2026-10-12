@@ -1,0 +1,15 @@
+[Unit]
+Description=PersonalWallet listener watchdog — restarts a listener that stopped polling
+Documentation=file:/home/slavy/personal_wallet/listeners/README.md
+After=network-online.target
+
+[Service]
+Type=oneshot
+# Runs as root because it calls `systemctl restart` on the listener units. It reads the project's
+# .env for the mail credentials and touches nothing else.
+User=root
+WorkingDirectory=/home/slavy/personal_wallet
+ExecStart=/usr/bin/node /home/slavy/personal_wallet/listeners/watchdog.js
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=pw-listener-watchdog

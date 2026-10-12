@@ -16,6 +16,19 @@
 const { ethers } = require("ethers");
 
 const DEFAULT_COOLDOWN_MS = 120_000;
+const DEFAULT_ROUNDS = 3;
+const ROUND_PAUSE_MS = 2_000;
+
+/** Thrown when every endpoint failed on every round. Carries enough detail to put in an email. */
+class AllEndpointsFailed extends Error {
+  constructor(name, rounds, tried) {
+    super(`${name}: all endpoints failed on ${rounds} full rounds\n  ` + tried.join("\n  "));
+    this.name = "AllEndpointsFailed";
+    this.allEndpointsFailed = true;
+    this.rounds = rounds;
+    this.tried = tried;
+  }
+}
 
 class RpcPool {
   /**
@@ -31,6 +44,12 @@ class RpcPool {
     this.chainId = Number(o.chainId);
     this.log = o.log || (() => {});
     this.cooldownMs = o.cooldownMs ?? DEFAULT_COOLDOWN_MS;
+    // How many complete passes over the endpoint list before giving up. On the second and later
+    // passes the cooldown is ignored, so the list really does wrap round to the first endpoint.
+    this.rounds = o.rounds ?? DEFAULT_ROUNDS;
+    // Anomalies worth telling a human about: an endpoint going down, the active one changing,
+    // everything failing. The watcher decides what to do with them; the pool only reports.
+    this.onAnomaly = o.onAnomaly || (() => {});
     this.endpoints = o.endpoints.map((e) => ({
       ...e,
       failedUntil: 0,
@@ -78,68 +97,79 @@ class RpcPool {
    */
   async withProvider(fn, opts = {}) {
     const cap = opts.capability || null;
+    const rounds = opts.rounds ?? this.rounds;
     const tried = [];
-    let avail = this._available().filter((e) => !cap || !e.unsupported.has(cap));
-    if (avail.length === 0 && cap) {
-      // Nothing claims to support it — try the unsupported ones once more rather than give up,
-      // since a provider may have gained the capability since it was last recorded.
-      avail = this._available();
-      for (const e of avail) e.unsupported.delete(cap);
-      this.log(`${this.name}: no endpoint supports "${cap}" — clearing the record and retrying all`);
-    }
-    // If everything is in cooldown, ignore the cooldown rather than refuse to work — a stale
-    // listener is worse than a hammered endpoint.
-    if (avail.length === 0) {
-      this.log(`${this.name}: every endpoint is in cooldown, trying them all anyway`);
-      avail = this.endpoints.slice();
-    }
 
-    for (const e of avail) {
-      let provider;
-      try {
-        provider = this._provider(e);
-        const out = await fn(provider);
-        if (this.current !== e.label) {
-          this.log(`${this.name}: using ${e.label}`, { url: redact(e.url) });
-          this.current = e.label;
+    for (let round = 1; round <= rounds; round++) {
+      // Round 1 respects the cooldown. Later rounds ignore it, which is what makes the list wrap
+      // back to the first endpoint instead of stalling once everything is parked.
+      let avail = round === 1 ? this._available() : this.endpoints.slice();
+      if (cap) {
+        const supported = avail.filter((e) => !e.unsupported.has(cap));
+        if (supported.length > 0) avail = supported;
+        else if (round === rounds) {
+          // Nothing claims to support it — clear the record and let the last round try anyway,
+          // in case a provider gained the capability since it was last tested.
+          for (const e of avail) e.unsupported.delete(cap);
+          this.log(`${this.name}: no endpoint supports "${cap}" — cleared the record for one retry`);
         }
-        e.successes++;
-        e.failures = 0;
-        return out;
-      } catch (err) {
-        // A capability failure is not ill-health: remember what this endpoint cannot do and
-        // move on, leaving its health untouched so other calls keep using it.
-        if (cap && !isRevert(err) && !isTransient(err)) {
-          const n = (e.capFailures.get(cap) || 0) + 1;
-          e.capFailures.set(cap, n);
-          if (n >= 3) {
-            e.unsupported.add(cap);
-            this.log(`${this.name}: ${e.label} does not support "${cap}" — skipping it for that call only`,
-              { error: String(err.shortMessage || err.message || err).slice(0, 120) });
+      }
+      if (avail.length === 0) avail = this.endpoints.slice();
+
+      for (const e of avail) {
+        let provider;
+        try {
+          provider = this._provider(e);
+          const out = await fn(provider);
+          if (this.current !== e.label) {
+            const from = this.current;
+            this.current = e.label;
+            this.log(`${this.name}: using ${e.label}`, { url: redact(e.url) });
+            // Only report a CHANGE, and only after something was already in use — the first
+            // selection at startup is not an anomaly.
+            if (from) this.onAnomaly({ type: "switched", from, to: e.label, round });
           }
-          tried.push(`${e.label}: ${String(err.shortMessage || err.message).slice(0, 80)}`);
-          continue;
-        }
-        // A CONTRACT REVERT IS AN ANSWER, NOT A FAILURE. The endpoint did its job: it executed
-        // the call and returned the revert data. Rotating here both slanders a healthy endpoint
-        // and destroys the revert payload, which is the thing the caller wanted — it is why a
-        // decoded revert reason came back as "(could not decode)".
-        if (isRevert(err)) {
           e.successes++;
           e.failures = 0;
-          throw err;
+          return out;
+        } catch (err) {
+          if (cap && !isRevert(err) && !isTransient(err)) {
+            const n = (e.capFailures.get(cap) || 0) + 1;
+            e.capFailures.set(cap, n);
+            if (n >= 3) {
+              e.unsupported.add(cap);
+              this.log(`${this.name}: ${e.label} does not support "${cap}" — skipping it for that call only`,
+                { error: String(err.shortMessage || err.message || err).slice(0, 120) });
+            }
+            tried.push(`round ${round} · ${e.label}: ${String(err.shortMessage || err.message).slice(0, 80)}`);
+            continue;
+          }
+          // A CONTRACT REVERT IS AN ANSWER, NOT A FAILURE. The endpoint executed the call and
+          // returned the revert data; rotating would slander it and destroy the payload.
+          if (isRevert(err)) {
+            e.successes++;
+            e.failures = 0;
+            throw err;
+          }
+          e.failures++;
+          e.lastError = String(err.shortMessage || err.message || err).slice(0, 200);
+          e.failedUntil = Date.now() + this.cooldownMs * Math.min(e.failures, 5);
+          tried.push(`round ${round} · ${e.label}: ${e.lastError}`);
+          this.log(`${this.name}: ${e.label} failed, moving on`, { error: e.lastError, round });
+          this.onAnomaly({ type: "endpointFailed", endpoint: e.label, error: e.lastError, round });
+        } finally {
+          try { provider?.destroy(); } catch { /* nothing to do */ }
         }
-        e.failures++;
-        e.lastError = String(err.shortMessage || err.message || err).slice(0, 200);
-        e.failedUntil = Date.now() + this.cooldownMs * Math.min(e.failures, 5);
-        tried.push(`${e.label}: ${e.lastError}`);
-        this.log(`${this.name}: ${e.label} failed, moving on`, { error: e.lastError });
-      } finally {
-        try { provider?.destroy(); } catch { /* nothing to do */ }
+      }
+
+      if (round < rounds) {
+        this.log(`${this.name}: round ${round} of ${rounds} exhausted every endpoint — pausing before the next`);
+        await new Promise((r) => setTimeout(r, ROUND_PAUSE_MS * round));
       }
     }
-    const err = new Error(`${this.name}: all ${avail.length} endpoints failed\n  ` + tried.join("\n  "));
-    err.allEndpointsFailed = true;
+
+    const err = new AllEndpointsFailed(this.name, rounds, tried);
+    this.onAnomaly({ type: "allFailed", rounds, tried, stats: this.stats() });
     throw err;
   }
 
@@ -197,4 +227,4 @@ function redact(url) {
     .replace(/\/[A-Za-z0-9_-]{30,}(\/|$)/g, "/<KEY>$1");
 }
 
-module.exports = { RpcPool, redact, isRevert, isTransient };
+module.exports = { RpcPool, redact, isRevert, isTransient, AllEndpointsFailed };

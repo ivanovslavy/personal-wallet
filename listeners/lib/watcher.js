@@ -61,12 +61,29 @@ class Watcher {
       // Scanning for failed transactions costs one getBlock per block. Skipped on a long
       // catch-up rather than firing thousands of calls; the log scan still covers that range.
       maxFailedScanBlocks: 300,
+      // When every endpoint has failed every round, STOP trying at the poll cadence and wait.
+      // Hammering dead endpoints every 20 seconds helps nobody, fills the journal, and can get
+      // the listener rate-limited precisely when it needs to come back.
+      backoffMs: 15 * 60_000,
+      // RPC anomalies are aggregated and sent at most this often, so a flapping endpoint cannot
+      // turn the alerting into a flood.
+      anomalyMailMs: 30 * 60_000,
       log: () => {},
     }, o);
     this.addresses = o.addresses.map((a) => a.toLowerCase());
     this.consecutiveFailures = 0;
     this.failureAlerted = false;
     this.stopping = false;
+    this.inBackoff = false;
+    this.anomalies = [];
+    this.lastAnomalyMail = 0;
+
+    // The pool reports; the watcher decides. Collected here and mailed on a timer rather than
+    // one message per event.
+    this.pool.onAnomaly = (a) => {
+      this.anomalies.push({ ...a, at: new Date().toISOString() });
+      if (this.anomalies.length > 50) this.anomalies.splice(0, this.anomalies.length - 50);
+    };
   }
 
   async start() {
@@ -85,19 +102,39 @@ class Watcher {
           if (this.failureAlerted) {
             await this.mailer.send({
               subject: `[${this.network}] listener recovered`,
-              text: `The listener is reading the chain again after ${this.consecutiveFailures} failed cycles.\n`
-                + `Current position: block ${this.state.data.lastBlock}.\n`,
+              text: `The listener is reading the chain again after ${this.consecutiveFailures} failed cycle(s)`
+                + `${this.inBackoff ? " and a pause" : ""}.\n`
+                + `Current position: block ${this.state.data.lastBlock}.\n`
+                + `Now using: ${this.pool.current}\n`,
             });
           }
         }
         this.consecutiveFailures = 0;
         this.failureAlerted = false;
+        this.inBackoff = false;
       } catch (e) {
         this.consecutiveFailures++;
         const msg = String(e.message || e).slice(0, 1500);
         this.log(`${this.network}: cycle failed (${this.consecutiveFailures} in a row)`, { error: msg });
-        // Alert once, after a few failures — not on the first blip, and not every cycle after.
-        if (this.consecutiveFailures === 5 && !this.failureAlerted) {
+
+        // Every endpoint failed every round. Stop trying at the poll cadence and back off.
+        if (e.allEndpointsFailed) {
+          this.inBackoff = true;
+          if (!this.failureAlerted) {
+            this.failureAlerted = true;
+            await this.mailer.send({
+              subject: `[${this.network}] NO RPC IS ANSWERING — the listener has paused`,
+              text: `Every endpoint failed on all ${e.rounds} rounds, so the listener has stopped\n`
+                + `retrying at its normal cadence and will wait ${this.backoffMs / 60000} minutes before\n`
+                + `trying again. It is not in a tight loop and it has not lost its place.\n\n`
+                + `Position held: block ${this.state.data.lastBlock} — nothing between there and the chain\n`
+                + `head will be missed; it resumes from that block the moment an endpoint answers.\n\n`
+                + `What was tried:\n  ${(e.tried || []).join("\n  ")}\n\n`
+                + `Endpoint status:\n${JSON.stringify(this.pool.stats(), null, 2)}\n`,
+            });
+          }
+        } else if (this.consecutiveFailures === 5 && !this.failureAlerted) {
+          // Alert once, after a few failures — not on the first blip, and not every cycle after.
           this.failureAlerted = true;
           await this.mailer.send({
             subject: `[${this.network}] listener cannot read the chain`,
@@ -108,9 +145,69 @@ class Watcher {
           });
         }
       }
-      await this.sleep(this.pollMs);
+
+      await this.reportAnomalies();
+      const wait = this.inBackoff ? this.backoffMs : this.pollMs;
+      if (this.inBackoff) this.log(`${this.network}: backing off for ${wait / 60000} minutes before retrying`);
+      await this.sleep(wait);
     }
     this.log(`${this.network}: stopped`);
+    // Say so. A listener that goes quiet is indistinguishable from a listener that is fine.
+    await this.mailer.send({
+      subject: `[${this.network}] listener STOPPED`,
+      text: `The listener has shut down cleanly.\n\n`
+        + `Position held: block ${this.state.data.lastBlock}\n`
+        + `Events seen: ${this.state.data.eventsSeen} · alerts sent: ${this.state.data.alertsSent}\n\n`
+        + `If this was not deliberate, the chain is no longer being watched. systemd is set to\n`
+        + `restart it, and the watchdog timer checks every 5 minutes that it is actually polling.\n`,
+    }).catch(() => {});
+  }
+
+  /**
+   * Sends up a digest of RPC anomalies — an endpoint going down, the active one changing.
+   * Rate-limited and aggregated, because a flapping endpoint would otherwise produce an email
+   * per flap. Switching endpoints is normal and successful behaviour; it is reported so a
+   * degrading provider is visible, not because anything is broken.
+   */
+  async reportAnomalies() {
+    if (this.anomalies.length === 0) return;
+    const since = Date.now() - this.lastAnomalyMail;
+    if (this.lastAnomalyMail && since < this.anomalyMailMs) return;
+
+    const items = this.anomalies.splice(0, this.anomalies.length);
+    const switched = items.filter((a) => a.type === "switched");
+    const failed = items.filter((a) => a.type === "endpointFailed");
+    // "allFailed" has its own, louder email; it is not folded into this digest.
+    if (switched.length === 0 && failed.length === 0) return;
+
+    const lines = [
+      `${items.length} RPC anomal${items.length === 1 ? "y" : "ies"} on ${this.network}.`,
+      `The listener kept working — this is the fallback doing its job, reported so a provider`,
+      `that is quietly degrading does not go unnoticed.`,
+      "",
+    ];
+    if (failed.length) {
+      lines.push(`Endpoints that failed (${failed.length}):`);
+      for (const a of failed.slice(0, 12)) lines.push(`  ${a.at}  ${a.endpoint}  round ${a.round}  ${a.error}`);
+      if (failed.length > 12) lines.push(`  …and ${failed.length - 12} more`);
+      lines.push("");
+    }
+    if (switched.length) {
+      lines.push(`Active endpoint changed (${switched.length}):`);
+      for (const a of switched.slice(0, 12)) lines.push(`  ${a.at}  ${a.from} -> ${a.to}`);
+      if (switched.length > 12) lines.push(`  …and ${switched.length - 12} more`);
+      lines.push("");
+    }
+    lines.push(`Currently using: ${this.pool.current}`);
+    lines.push(`Position: block ${this.state.data.lastBlock}`);
+    lines.push("");
+    lines.push(`Endpoint status:\n${JSON.stringify(this.pool.stats(), null, 2)}`);
+
+    this.lastAnomalyMail = Date.now();
+    await this.mailer.send({
+      subject: `[${this.network}] ${failed.length} RPC failure(s), ${switched.length} switch(es)`,
+      text: lines.join("\n"),
+    });
   }
 
   async cycle() {

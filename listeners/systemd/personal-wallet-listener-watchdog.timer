@@ -1,0 +1,12 @@
+[Unit]
+Description=Check every 5 minutes that the PersonalWallet listeners are still polling
+
+[Timer]
+OnBootSec=3min
+OnUnitActiveSec=5min
+# Catch up after the machine was asleep or off, so a gap is noticed rather than skipped.
+Persistent=true
+AccuracySec=30s
+
+[Install]
+WantedBy=timers.target
