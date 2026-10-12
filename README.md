@@ -296,9 +296,16 @@ The live run is not a simulation: every refusal in it is a real transaction mine
 because a `staticCall` proves what the contract would say while a mined failure proves what the
 chain accepts.
 
-Also run: **Mythril** (symbolic execution) and an external LLM review. Details and the full
-reasoning behind every accepted finding are in [`docs/SLITHER.md`](docs/SLITHER.md) and
-[`docs/CONTRACT.md`](docs/CONTRACT.md).
+**Mythril** (symbolic execution, 17 modules including `EtherThief`) reports **no findings** on the
+source, across a 59-minute run at `-t 3`. Its bytecode-mode run reports 38 HIGH integer overflows
+which are over-reporting from missing compiler context — demonstrated on a 196-byte control
+contract containing exactly one real overflow, where bytecode mode reported three. The contract
+has no `unchecked` block, so solc 0.8.28 reverts on every overflow by construction. Full triage,
+including the transaction-depth limit that makes a default `-t 2` Mythril run meaningless on a
+multisig, is in [`docs/MYTHRIL.md`](docs/MYTHRIL.md).
+
+Every accepted finding from every tool is reasoned through in [`docs/SLITHER.md`](docs/SLITHER.md),
+[`docs/MYTHRIL.md`](docs/MYTHRIL.md) and [`docs/CONTRACT.md`](docs/CONTRACT.md).
 
 ---
 
