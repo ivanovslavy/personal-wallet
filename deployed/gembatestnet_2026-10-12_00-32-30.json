@@ -1,0 +1,40 @@
+{
+  "network": "gembatestnet",
+  "chainId": 821207,
+  "deployedAt": "2026-10-11T21:32:30.627Z",
+  "localTime": "2026-10-12 00:32:30 +03:00",
+  "deployer": "0x52a15dfbeB25cC4Cca45eA51d7289009d44B092b",
+  "explorer": "https://gembascan.io",
+  "contracts": [
+    {
+      "name": "PersonalWallet",
+      "fullyQualifiedName": "contracts/PersonalWallet.sol:PersonalWallet",
+      "address": "0x5841967254f19487Cd08A68e4Be590475392c20E",
+      "constructorArgs": [
+        [
+          "0xf8e78C23afFFe1A66B82B6095B3BB7d53c8ea5C8",
+          "0xed0c6BF38dA43586fA624e08e5D7e0bC1F99E0D5",
+          "0x900212aDBE3e81C1b5a0F7eAF253B5217395DE52"
+        ]
+      ],
+      "txHash": "0xd1378e9784165688af578efe3426d07bdcddeb779749562c99525d97fcc84ab2",
+      "block": 3974613,
+      "gasUsed": "3178769",
+      "compiler": {
+        "version": "0.8.28",
+        "optimizer": {
+          "enabled": true,
+          "runs": 200
+        },
+        "evmVersion": "cancun"
+      },
+      "explorer": "https://gembascan.io/address/0x5841967254f19487Cd08A68e4Be590475392c20E",
+      "verified": null
+    }
+  ],
+  "owners": [
+    "0xf8e78C23afFFe1A66B82B6095B3BB7d53c8ea5C8",
+    "0xed0c6BF38dA43586fA624e08e5D7e0bC1F99E0D5",
+    "0x900212aDBE3e81C1b5a0F7eAF253B5217395DE52"
+  ]
+}

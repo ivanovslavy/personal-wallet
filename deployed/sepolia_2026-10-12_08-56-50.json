@@ -1,0 +1,59 @@
+{
+  "network": "sepolia",
+  "chainId": 11155111,
+  "deployedAt": "2026-10-12T05:56:50.411Z",
+  "localTime": "2026-10-12 08:56:50 +03:00",
+  "deployer": "0x2786e48814C2E562A92aE53187b848DBB312d1a4",
+  "explorer": "https://sepolia.etherscan.io",
+  "contracts": [
+    {
+      "name": "PersonalWallet",
+      "fullyQualifiedName": "contracts/PersonalWallet.sol:PersonalWallet",
+      "address": "0x628b6A266fFb4acED394D3eb7879B880B7eccF56",
+      "constructorArgs": [
+        [
+          "0x8eB8Bf106EbC9834a2586D04F73866C7436Ce298",
+          "0x3A9Da2349caE432F46A04737d5F4c5EF9ef11973",
+          "0xc45112B334822811f4418e2f13C2C80FF790C949"
+        ],
+        false,
+        true,
+        [
+          "0x2786e48814C2E562A92aE53187b848DBB312d1a4"
+        ],
+        [
+          "deployer / escape hatch"
+        ],
+        [
+          "0x00D75E583DF2998C7582842e69208ad90820Eaa1",
+          "0xC4De068C028127bdB44670Edb82e6E3Ff4113E49",
+          "0x2FCb50B9cA1cf336a287C1b9987720FC541260B4"
+        ],
+        [
+          "USDT (GembaPay Sepolia)",
+          "USDC (GembaPay Sepolia)",
+          "EURC (GembaPay Sepolia)"
+        ]
+      ],
+      "txHash": "0x0778da9da210a7943622049feccb471d89fcd895fb4cae39030f5717eb58044b",
+      "block": 11896938,
+      "gasUsed": "36411609",
+      "compiler": {
+        "version": "0.8.28",
+        "optimizer": {
+          "enabled": true,
+          "runs": 200
+        },
+        "evmVersion": "cancun",
+        "viaIR": true
+      },
+      "explorer": "https://sepolia.etherscan.io/address/0x628b6A266fFb4acED394D3eb7879B880B7eccF56",
+      "verified": null
+    }
+  ],
+  "owners": [
+    "0x8eB8Bf106EbC9834a2586D04F73866C7436Ce298",
+    "0x3A9Da2349caE432F46A04737d5F4c5EF9ef11973",
+    "0xc45112B334822811f4418e2f13C2C80FF790C949"
+  ]
+}

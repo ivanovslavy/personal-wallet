@@ -1,0 +1,55 @@
+{
+  "network": "gembatestnet",
+  "chainId": 821207,
+  "deployedAt": "2026-10-11T23:39:15.479Z",
+  "localTime": "2026-10-12 02:39:15 +03:00",
+  "deployer": "0x52a15dfbeB25cC4Cca45eA51d7289009d44B092b",
+  "explorer": "https://gembascan.io",
+  "contracts": [
+    {
+      "name": "PersonalWallet",
+      "fullyQualifiedName": "contracts/PersonalWallet.sol:PersonalWallet",
+      "address": "0xD7e5e821F6118cC6b1597C86C856b9AF34B49406",
+      "constructorArgs": [
+        [
+          "0xf8e78C23afFFe1A66B82B6095B3BB7d53c8ea5C8",
+          "0xed0c6BF38dA43586fA624e08e5D7e0bC1F99E0D5",
+          "0x900212aDBE3e81C1b5a0F7eAF253B5217395DE52"
+        ],
+        true,
+        true,
+        [
+          "0x52a15dfbeB25cC4Cca45eA51d7289009d44B092b"
+        ],
+        [
+          "test cold address"
+        ],
+        [
+          "0x5E5fFf458964032ba6f034eCF4E4291b2EbDB5D6"
+        ],
+        [
+          "Tether USD (test)"
+        ]
+      ],
+      "txHash": "0xf74872da0d1c36295206f57120afbf2e989ae32a23785a1b5ead0e40e8b532f5",
+      "block": 3977895,
+      "gasUsed": "5179588",
+      "compiler": {
+        "version": "0.8.28",
+        "optimizer": {
+          "enabled": true,
+          "runs": 200
+        },
+        "evmVersion": "cancun",
+        "viaIR": true
+      },
+      "explorer": "https://gembascan.io/address/0xD7e5e821F6118cC6b1597C86C856b9AF34B49406",
+      "verified": null
+    }
+  ],
+  "owners": [
+    "0xf8e78C23afFFe1A66B82B6095B3BB7d53c8ea5C8",
+    "0xed0c6BF38dA43586fA624e08e5D7e0bC1F99E0D5",
+    "0x900212aDBE3e81C1b5a0F7eAF253B5217395DE52"
+  ]
+}

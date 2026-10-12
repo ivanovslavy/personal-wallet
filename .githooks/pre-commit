@@ -1,0 +1,5 @@
+#!/usr/bin/env bash
+# Refuses the commit if the secret scan finds anything.
+set -euo pipefail
+echo "pre-commit: scanning for credentials…"
+bash scripts/check-secrets.sh

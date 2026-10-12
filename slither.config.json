@@ -1,0 +1,11 @@
+{
+  "//": "Slither configuration. `npm run slither` audits only the contract that is deployed to hold value; `npm run slither:all` includes the test mocks and OpenZeppelin. Every filter below has a reason, recorded in docs/SLITHER.md — nothing is silenced because it was inconvenient.",
+  "filter_paths": "node_modules|contracts/mocks",
+  "exclude_informational": false,
+  "exclude_optimization": false,
+  "exclude_low": false,
+  "exclude_medium": false,
+  "exclude_high": false,
+  "hardhat_ignore_compile": true,
+  "legacy_ast": false
+}

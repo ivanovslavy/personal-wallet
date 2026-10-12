@@ -1,0 +1,1571 @@
+{
+  "network": "gembatestnet",
+  "chainId": 821207,
+  "deployedAt": "2026-10-11T23:24:21.430Z",
+  "localTime": "2026-10-12 02:24:21 +03:00",
+  "deployer": "0x52a15dfbeB25cC4Cca45eA51d7289009d44B092b",
+  "explorer": "https://gembascan.io",
+  "run": "live-e2e",
+  "contracts": [
+    {
+      "name": "MockUSDT",
+      "fullyQualifiedName": "contracts/mocks/TestTokens.sol:MockUSDT",
+      "address": "0x5E5fFf458964032ba6f034eCF4E4291b2EbDB5D6",
+      "constructorArgs": [],
+      "txHash": "0x1fe07e6976ed13333cab9bae034f5622e3fab34af82471ee3658b6e5c239f369",
+      "block": 3977513,
+      "gasUsed": "455354",
+      "compiler": {
+        "version": "0.8.28",
+        "optimizer": {
+          "enabled": true,
+          "runs": 200
+        },
+        "evmVersion": "cancun",
+        "viaIR": true
+      },
+      "explorer": "https://gembascan.io/address/0x5E5fFf458964032ba6f034eCF4E4291b2EbDB5D6",
+      "verified": {
+        "result": "verified",
+        "at": "2026-10-11T23:40:07.310Z"
+      }
+    },
+    {
+      "name": "MockUSDC",
+      "fullyQualifiedName": "contracts/mocks/TestTokens.sol:MockUSDC",
+      "address": "0xB3C6A6AD74ae9803F45D5642EbF220e8B5008eaB",
+      "constructorArgs": [],
+      "txHash": "0xb7136ff66c3ece383503c2372b8960e757aa6c6940506f95c62b1e6d6857bac4",
+      "block": 3977516,
+      "gasUsed": "586219",
+      "compiler": {
+        "version": "0.8.28",
+        "optimizer": {
+          "enabled": true,
+          "runs": 200
+        },
+        "evmVersion": "cancun",
+        "viaIR": true
+      },
+      "explorer": "https://gembascan.io/address/0xB3C6A6AD74ae9803F45D5642EbF220e8B5008eaB",
+      "verified": {
+        "result": "verified",
+        "at": "2026-10-11T23:40:31.719Z"
+      }
+    },
+    {
+      "name": "MockEURC",
+      "fullyQualifiedName": "contracts/mocks/TestTokens.sol:MockEURC",
+      "address": "0x55E46Df8879571BbdB24c8a6449aE0f7E41EFefc",
+      "constructorArgs": [],
+      "txHash": "0x95507010d60d2083780ae07fc89443fc950771bed86146f9e94dc1e2cac4c83e",
+      "block": 3977518,
+      "gasUsed": "546208",
+      "compiler": {
+        "version": "0.8.28",
+        "optimizer": {
+          "enabled": true,
+          "runs": 200
+        },
+        "evmVersion": "cancun",
+        "viaIR": true
+      },
+      "explorer": "https://gembascan.io/address/0x55E46Df8879571BbdB24c8a6449aE0f7E41EFefc",
+      "verified": {
+        "result": "verified",
+        "at": "2026-10-11T23:40:54.137Z"
+      }
+    },
+    {
+      "name": "MockERC721",
+      "fullyQualifiedName": "contracts/mocks/TestTokens.sol:MockERC721",
+      "address": "0x959E69f99Ece28Bea84A4069973B75A2989D903c",
+      "constructorArgs": [
+        "Gemba Live",
+        "GLIVE"
+      ],
+      "txHash": "0x56feab2ccf5d796d70e87e87268f4d2f810f99c6086c51387b1a0b5d98f44a71",
+      "block": 3977519,
+      "gasUsed": "847618",
+      "compiler": {
+        "version": "0.8.28",
+        "optimizer": {
+          "enabled": true,
+          "runs": 200
+        },
+        "evmVersion": "cancun",
+        "viaIR": true
+      },
+      "explorer": "https://gembascan.io/address/0x959E69f99Ece28Bea84A4069973B75A2989D903c",
+      "verified": {
+        "result": "verified",
+        "at": "2026-10-11T23:41:15.710Z"
+      }
+    },
+    {
+      "name": "MockERC1155",
+      "fullyQualifiedName": "contracts/mocks/TestTokens.sol:MockERC1155",
+      "address": "0x63785113E787c9bD8fF2104D8CAFa4143d9274a7",
+      "constructorArgs": [],
+      "txHash": "0xc593ca9a22efac386dd008da0da9f212c47d0cc57bd348e170a1ed32dd3c2cfc",
+      "block": 3977520,
+      "gasUsed": "1086887",
+      "compiler": {
+        "version": "0.8.28",
+        "optimizer": {
+          "enabled": true,
+          "runs": 200
+        },
+        "evmVersion": "cancun",
+        "viaIR": true
+      },
+      "explorer": "https://gembascan.io/address/0x63785113E787c9bD8fF2104D8CAFa4143d9274a7",
+      "verified": {
+        "result": "verified",
+        "at": "2026-10-11T23:41:38.768Z"
+      }
+    },
+    {
+      "name": "LyingERC20",
+      "fullyQualifiedName": "contracts/mocks/Attackers.sol:LyingERC20",
+      "address": "0x62E46284229Ef7C44fd5da1Ce786106f22a1C2d5",
+      "constructorArgs": [],
+      "txHash": "0x0d76a7d991c616c52149710163af0c255febb386e49833efde8dd563e058f079",
+      "block": 3977523,
+      "gasUsed": "241211",
+      "compiler": {
+        "version": "0.8.28",
+        "optimizer": {
+          "enabled": true,
+          "runs": 200
+        },
+        "evmVersion": "cancun",
+        "viaIR": true
+      },
+      "explorer": "https://gembascan.io/address/0x62E46284229Ef7C44fd5da1Ce786106f22a1C2d5",
+      "verified": {
+        "result": "verified",
+        "at": "2026-10-11T23:41:59.574Z"
+      }
+    },
+    {
+      "name": "RejectingReceiver",
+      "fullyQualifiedName": "contracts/mocks/Attackers.sol:RejectingReceiver",
+      "address": "0x957930D2Df7F8249200021D9884088Ff9B6144B0",
+      "constructorArgs": [],
+      "txHash": "0x09ca5a2ecd9cb49d601d0e6c92bee81f0fd13f54bec2ceaf4f775e9529fdff96",
+      "block": 3977526,
+      "gasUsed": "156183",
+      "compiler": {
+        "version": "0.8.28",
+        "optimizer": {
+          "enabled": true,
+          "runs": 200
+        },
+        "evmVersion": "cancun",
+        "viaIR": true
+      },
+      "explorer": "https://gembascan.io/address/0x957930D2Df7F8249200021D9884088Ff9B6144B0",
+      "verified": {
+        "result": "verified",
+        "at": "2026-10-11T23:42:23.192Z"
+      }
+    },
+    {
+      "name": "OutsiderProber",
+      "fullyQualifiedName": "contracts/mocks/Attackers.sol:OutsiderProber",
+      "address": "0x650b7955F4d92Ec0A9AD4b14AB66dE1f305a8239",
+      "constructorArgs": [],
+      "txHash": "0x0217f0dff87a68b86a29caedede6e22fdebc491e8d42b72ac8578f1d6e87f1a0",
+      "block": 3977528,
+      "gasUsed": "242557",
+      "compiler": {
+        "version": "0.8.28",
+        "optimizer": {
+          "enabled": true,
+          "runs": 200
+        },
+        "evmVersion": "cancun",
+        "viaIR": true
+      },
+      "explorer": "https://gembascan.io/address/0x650b7955F4d92Ec0A9AD4b14AB66dE1f305a8239",
+      "verified": {
+        "result": "verified",
+        "at": "2026-10-11T23:42:45.225Z"
+      }
+    },
+    {
+      "name": "PersonalWallet",
+      "fullyQualifiedName": "contracts/PersonalWallet.sol:PersonalWallet",
+      "address": "0xA65e6bc3559621E1A0eba845BF867F4d06dEFE1F",
+      "constructorArgs": [
+        [
+          "0xf8e78C23afFFe1A66B82B6095B3BB7d53c8ea5C8",
+          "0xed0c6BF38dA43586fA624e08e5D7e0bC1F99E0D5",
+          "0x900212aDBE3e81C1b5a0F7eAF253B5217395DE52"
+        ],
+        false,
+        false,
+        [],
+        [],
+        [],
+        []
+      ],
+      "txHash": "0x33a9019cca4b93f2f80d6bb952323ccbced317777cb0b87cb81a1970e6798e7d",
+      "block": 3977529,
+      "gasUsed": "4993230",
+      "compiler": {
+        "version": "0.8.28",
+        "optimizer": {
+          "enabled": true,
+          "runs": 200
+        },
+        "evmVersion": "cancun",
+        "viaIR": true
+      },
+      "explorer": "https://gembascan.io/address/0xA65e6bc3559621E1A0eba845BF867F4d06dEFE1F",
+      "verified": {
+        "result": "already",
+        "at": "2026-10-11T23:42:45.766Z"
+      }
+    },
+    {
+      "name": "ReentrancyAttacker",
+      "fullyQualifiedName": "contracts/mocks/Attackers.sol:ReentrancyAttacker",
+      "address": "0x31b76052D405977d671CFa0F3EE8f0514cdc21Ca",
+      "constructorArgs": [],
+      "txHash": "0x6708769b182dcf3791ee728fe516475cabe18141b8ab97f5ca413de2747df141",
+      "block": 3977655,
+      "gasUsed": "636230",
+      "compiler": {
+        "version": "0.8.28",
+        "optimizer": {
+          "enabled": true,
+          "runs": 200
+        },
+        "evmVersion": "cancun",
+        "viaIR": true
+      },
+      "explorer": "https://gembascan.io/address/0x31b76052D405977d671CFa0F3EE8f0514cdc21Ca",
+      "verified": {
+        "result": "already",
+        "at": "2026-10-12T04:44:37.536Z"
+      }
+    },
+    {
+      "name": "PersonalWallet",
+      "fullyQualifiedName": "contracts/PersonalWallet.sol:PersonalWallet",
+      "address": "0x2660616e484a188b5E948662867f976d61a8eDA8",
+      "constructorArgs": [
+        [
+          "0xf8e78C23afFFe1A66B82B6095B3BB7d53c8ea5C8",
+          "0xed0c6BF38dA43586fA624e08e5D7e0bC1F99E0D5",
+          "0x31b76052D405977d671CFa0F3EE8f0514cdc21Ca"
+        ],
+        false,
+        false,
+        [],
+        [],
+        [],
+        []
+      ],
+      "txHash": "0xca1b9c5eee92df04117d09f36d31ba29c37bcba0759e7d753dcc08d34d6e3b68",
+      "block": 3977658,
+      "gasUsed": "4993230",
+      "compiler": {
+        "version": "0.8.28",
+        "optimizer": {
+          "enabled": true,
+          "runs": 200
+        },
+        "evmVersion": "cancun",
+        "viaIR": true
+      },
+      "explorer": "https://gembascan.io/address/0x2660616e484a188b5E948662867f976d61a8eDA8",
+      "verified": {
+        "result": "already",
+        "at": "2026-10-11T23:43:59.180Z"
+      }
+    },
+    {
+      "name": "PersonalWallet",
+      "fullyQualifiedName": "contracts/PersonalWallet.sol:PersonalWallet",
+      "address": "0x244ea77d96E8D53cc9d59A279eECef3A421aA8D3",
+      "constructorArgs": [
+        [
+          "0xf8e78C23afFFe1A66B82B6095B3BB7d53c8ea5C8",
+          "0xed0c6BF38dA43586fA624e08e5D7e0bC1F99E0D5",
+          "0x900212aDBE3e81C1b5a0F7eAF253B5217395DE52"
+        ],
+        true,
+        true,
+        [
+          "0x5a5Af5EDbdC1eD5258b3aeC33757A0A96863DFDd"
+        ],
+        [
+          "my cold wallet"
+        ],
+        [
+          "0x5E5fFf458964032ba6f034eCF4E4291b2EbDB5D6",
+          "0x959E69f99Ece28Bea84A4069973B75A2989D903c"
+        ],
+        [
+          "Tether USD",
+          "Gemba Live"
+        ]
+      ],
+      "txHash": "0x19a3b51fa6c1b45a0e596a8094e50dd37d319c30f7248ef9c5614d465b12a6b6",
+      "block": 3977828,
+      "gasUsed": "5250627",
+      "compiler": {
+        "version": "0.8.28",
+        "optimizer": {
+          "enabled": true,
+          "runs": 200
+        },
+        "evmVersion": "cancun",
+        "viaIR": true
+      },
+      "explorer": "https://gembascan.io/address/0x244ea77d96E8D53cc9d59A279eECef3A421aA8D3",
+      "verified": {
+        "result": "already",
+        "at": "2026-10-11T23:44:02.811Z"
+      }
+    }
+  ],
+  "owners": [
+    "0xf8e78C23afFFe1A66B82B6095B3BB7d53c8ea5C8",
+    "0xed0c6BF38dA43586fA624e08e5D7e0bC1F99E0D5",
+    "0x900212aDBE3e81C1b5a0F7eAF253B5217395DE52"
+  ],
+  "passed": 245,
+  "failed": 0,
+  "gasTotal": "41173734",
+  "steps": [
+    {
+      "step": "MockUSDT   (transfer returns nothing)",
+      "result": "pass",
+      "detail": "0x5E5fFf458964032ba6f034eCF4E4291b2EbDB5D6 · gas 455354"
+    },
+    {
+      "step": "MockUSDC   (6 decimals, blocklist)",
+      "result": "pass",
+      "detail": "0xB3C6A6AD74ae9803F45D5642EbF220e8B5008eaB · gas 586219"
+    },
+    {
+      "step": "MockEURC   (6 decimals, pausable)",
+      "result": "pass",
+      "detail": "0x55E46Df8879571BbdB24c8a6449aE0f7E41EFefc · gas 546208"
+    },
+    {
+      "step": "MockERC721",
+      "result": "pass",
+      "detail": "0x959E69f99Ece28Bea84A4069973B75A2989D903c · gas 847618"
+    },
+    {
+      "step": "MockERC1155",
+      "result": "pass",
+      "detail": "0x63785113E787c9bD8fF2104D8CAFa4143d9274a7 · gas 1086887"
+    },
+    {
+      "step": "LyingERC20 (transfer returns false)",
+      "result": "pass",
+      "detail": "0x62E46284229Ef7C44fd5da1Ce786106f22a1C2d5 · gas 241211"
+    },
+    {
+      "step": "RejectingReceiver",
+      "result": "pass",
+      "detail": "0x957930D2Df7F8249200021D9884088Ff9B6144B0 · gas 156183"
+    },
+    {
+      "step": "OutsiderProber",
+      "result": "pass",
+      "detail": "0x650b7955F4d92Ec0A9AD4b14AB66dE1f305a8239 · gas 242557"
+    },
+    {
+      "step": "PersonalWallet (permissive)",
+      "result": "pass",
+      "detail": "0xA65e6bc3559621E1A0eba845BF867F4d06dEFE1F · gas 4993230"
+    },
+    {
+      "step": "three owners on chain match what was deployed",
+      "result": "pass",
+      "detail": "0xf8e78C23afFFe1A66B82B6095B3BB7d53c8ea5C8, 0xed0c6BF38dA43586fA624e08e5D7e0bC1F99E0D5, 0x900212aDBE3e81C1b5a0F7eAF253B5217395DE52"
+    },
+    {
+      "step": "OWNER_COUNT=3 · THRESHOLD=2 on chain",
+      "result": "pass",
+      "detail": ""
+    },
+    {
+      "step": "the live ABI has no renounce/transfer-ownership entry point",
+      "result": "pass",
+      "detail": ""
+    },
+    {
+      "step": "native GMB into the wallet (plain receive)",
+      "result": "pass",
+      "detail": "tx 0xe92f2d4bed67ab34d809950c4ffb526bae9499d75761dfa34d8d083b17c3d514 · gas 22752"
+    },
+    {
+      "step": "native GMB into the wallet WITH calldata (fallback)",
+      "result": "pass",
+      "detail": "tx 0x9db54d5a65efbccff0e510311de5052e821a3df7b03bea2b64864b75f7dc9472 · gas 22800"
+    },
+    {
+      "step": "mint 1 000 USDT to the wallet",
+      "result": "pass",
+      "detail": "tx 0xea4feb4da4aaaf94ce2a293ffe588daa20d9aa6d0c4f00a396cd0febe1e16037 · gas 68138"
+    },
+    {
+      "step": "mint 1 000 USDC to the wallet",
+      "result": "pass",
+      "detail": "tx 0x8cfc5590080035783d8d08470e8164f93a2cf1220ec80a0bc967e4acbfd4a444 · gas 72405"
+    },
+    {
+      "step": "mint 1 000 EURC to the wallet",
+      "result": "pass",
+      "detail": "tx 0xde6143f9c66b5c1919c41a94bc432475fe11ffe2ca1c3b6faa8bf9a80a477b02 · gas 70205"
+    },
+    {
+      "step": "mint 500 LIE to the wallet",
+      "result": "pass",
+      "detail": "tx 0x09d82407e66fe1b0665df2cb4eb1ab393828ce73ed049698009008f6b208587e · gas 66367"
+    },
+    {
+      "step": "mint ERC-721 #1 to the wallet",
+      "result": "pass",
+      "detail": "tx 0x2782f9587acfcf2f018d26c37181fe927e4e683f9b57003753bdbe873e34d640 · gas 68452"
+    },
+    {
+      "step": "mint ERC-721 #2 to the wallet",
+      "result": "pass",
+      "detail": "tx 0xf3debf37c53dc309b5427eb0fd1bfe3f71ff8a8a7ac6d4c3eb1f444e0484c724 · gas 51352"
+    },
+    {
+      "step": "mint ERC-721 #3 to the wallet",
+      "result": "pass",
+      "detail": "tx 0x04922f3c758e1ba39156607d08eb73f2701986ec12fbffe9ddfe7d6e28910911 · gas 51352"
+    },
+    {
+      "step": "mint ERC-721 #4 to the wallet",
+      "result": "pass",
+      "detail": "tx 0x3d50b59686538faae2babd2c3361e83ad9427781602cdfbcb5bc455b036444c0 · gas 51352"
+    },
+    {
+      "step": "mint ERC-1155 id 1 ×100 to the wallet",
+      "result": "pass",
+      "detail": "tx 0x97567ffa11cfd523eb21fe57a3e6ff9fd5aab3b65ba56a1df006db7da0049c60 · gas 53299"
+    },
+    {
+      "step": "mint ERC-1155 id 2 ×50 to the wallet",
+      "result": "pass",
+      "detail": "tx 0xc5c805e5192d1b1b3849a360d7723210056e307e9677f8c2461a155bd6720db8 · gas 53299"
+    },
+    {
+      "step": "wallet holds 4 GMB, both deposit paths counted",
+      "result": "pass",
+      "detail": ""
+    },
+    {
+      "step": "owner 1 proposes 1 GMB to the recipient",
+      "result": "pass",
+      "detail": "tx 0x337299017782305ce65115f5465e2ef5d9e5dab03dabdde0c7d0f478de794adf · gas 149581"
+    },
+    {
+      "step": "ONE owner alone cannot execute it",
+      "result": "pass",
+      "detail": "NotEnoughConfirmations · 0x7c6eed6128857a4b0b9a0f80ca28a6d2d223ab7f1cbf2217332b055af07cd18c status=0"
+    },
+    {
+      "step": "owner 2 confirms",
+      "result": "pass",
+      "detail": "tx 0x95674a3853d00e09b279a1b409ee058b7eff0621cb4dba4d319ffd53ac7fbbf4 · gas 64917"
+    },
+    {
+      "step": "now it executes — 1 GMB moves",
+      "result": "pass",
+      "detail": "tx 0x5ef7e58460a1923e3b0cea8d455cf693b76aaf92ae8908ab43ac1ef245a1ccc8 · gas 96601"
+    },
+    {
+      "step": "the recipient really received 1 GMB",
+      "result": "pass",
+      "detail": "1.0"
+    },
+    {
+      "step": "it cannot be executed a second time",
+      "result": "pass",
+      "detail": "AlreadyExecuted · 0xfe0d40b82f9360d967a25cac2d97d2e6123b55f147aa052b35e963b4265a58dc status=0"
+    },
+    {
+      "step": "owner 2 proposes 250 USDT",
+      "result": "pass",
+      "detail": "tx 0xf752b69c7aa498d7be34af7ccacd03b954ec9093792ae6f67d5353b65d52c4e1 · gas 153339"
+    },
+    {
+      "step": "ONE owner alone cannot send USDT",
+      "result": "pass",
+      "detail": "NotEnoughConfirmations · 0x5c5a8000163640e4323460ab7617202ae3a939a747c091908bc4186c888349f9 status=0"
+    },
+    {
+      "step": "owner 3 confirms",
+      "result": "pass",
+      "detail": "tx 0x42ebd37c9f27f88e9e27f84979123a8cb9dca51c82c605b73e9e20f62ce7c323 · gas 64917"
+    },
+    {
+      "step": "USDT moves — a token whose transfer returns NOTHING",
+      "result": "pass",
+      "detail": "tx 0x92c5efead27b3457e3c08f2ea7b1fa0874b8852f116029addcf487f8bcb12af7 · gas 99719"
+    },
+    {
+      "step": "250 USDT arrived (SafeERC20 handled the missing return value)",
+      "result": "pass",
+      "detail": ""
+    },
+    {
+      "step": "owner 1 proposes ERC-721 #2",
+      "result": "pass",
+      "detail": "tx 0x92ea06e9c65ccd5e8b07ef6a29f8646f0c31e474dc8d70a77066f4b537de234a · gas 152165"
+    },
+    {
+      "step": "ONE owner alone cannot send the NFT",
+      "result": "pass",
+      "detail": "NotEnoughConfirmations · 0xde4659bec4ee7393137416be68951389602af3f4241d0a111adb5c56577bf7f7 status=0"
+    },
+    {
+      "step": "owner 3 confirms",
+      "result": "pass",
+      "detail": "tx 0x328bc3cdf97ff74b605f3f005c242d26edf4e58feed550c23581b2ed49936708 · gas 64917"
+    },
+    {
+      "step": "the NFT moves",
+      "result": "pass",
+      "detail": "tx 0x486ff29a7b985697e3854e8f7418f6dc7693687c94bed384741bfdec73ba7111 · gas 106970"
+    },
+    {
+      "step": "ERC-721 #2 is now owned by the recipient",
+      "result": "pass",
+      "detail": ""
+    },
+    {
+      "step": "owner 2 proposes 40 of ERC-1155 id 1",
+      "result": "pass",
+      "detail": "tx 0x984ef997a6057ec9131e24ca5345309923dc1633578aa8a2d5c1d755351060bf · gas 173160"
+    },
+    {
+      "step": "ONE owner alone cannot send the 1155",
+      "result": "pass",
+      "detail": "NotEnoughConfirmations · 0xd6006e3996edefd1f1f5560d5f8e994f49c301933709e80ca7723e6906bdd524 status=0"
+    },
+    {
+      "step": "owner 1 confirms",
+      "result": "pass",
+      "detail": "tx 0xf6f69811c46fd2b8f85fff2706c5b54367d24125af9f8b426fb0f252948de77c · gas 64917"
+    },
+    {
+      "step": "the 1155 moves",
+      "result": "pass",
+      "detail": "tx 0xedcbfd6938f3b9ec97548eb5b6e7861f1045cf992137a1a2160bf4ad55d5c14f · gas 103536"
+    },
+    {
+      "step": "40 units of id 1 arrived, 60 stay in the wallet",
+      "result": "pass",
+      "detail": ""
+    },
+    {
+      "step": "owner 3 proposes a mixed NFT batch of 4",
+      "result": "pass",
+      "detail": "tx 0xf454ba871353dbd84ccc6df1264e94ce76c6fceea0dba2113893d50f46f3d86a · gas 387426"
+    },
+    {
+      "step": "ONE owner alone cannot send the batch",
+      "result": "pass",
+      "detail": "NotEnoughConfirmations · 0xb993f7674382a4ab09b99af32aa253a6a17c6649abf1cb84606e06eba4535ba8 status=0"
+    },
+    {
+      "step": "owner 1 confirms",
+      "result": "pass",
+      "detail": "tx 0x856cacb5ff9bb7500a9602a83ff6497fb3927944bb11bbab836fc4e205d71714 · gas 64917"
+    },
+    {
+      "step": "the 4 items are stored with the proposal, not re-supplied at execution",
+      "result": "pass",
+      "detail": ""
+    },
+    {
+      "step": "the batch executes in ONE transaction",
+      "result": "pass",
+      "detail": "tx 0x794e1e4c916d7287ba1e95f2bdf7499ee19f0152a115b34a5e1680f30e92343d · gas 186348"
+    },
+    {
+      "step": "two ERC-721 and two ERC-1155 positions all delivered",
+      "result": "pass",
+      "detail": ""
+    },
+    {
+      "step": "proposeNative from a non-owner contract",
+      "result": "pass",
+      "detail": "NotOwner · 0x716158ce3e68a5e3c18dc01e69a0bfdf9d3e1833956afd90f76147ebeeafaa3d status=0"
+    },
+    {
+      "step": "confirm from a non-owner contract",
+      "result": "pass",
+      "detail": "NotOwner · 0x033dec0f2f6636da2aa62381885af2bd789fad79e9e995c52dc529a426d229fb status=0"
+    },
+    {
+      "step": "executeNative from a non-owner contract",
+      "result": "pass",
+      "detail": "NotOwner · 0x1e8dde01e66fd7fd0a71b6c98ccebce083b37b28d107d393cfd1f40ee3233574 status=0"
+    },
+    {
+      "step": "proposeOwnerReplacement from a non-owner contract",
+      "result": "pass",
+      "detail": "NotOwner · 0x9dfd69dfc5aa085d3baacf678e2848e1e210a9cfd8e3dd8b1ba3d40eccac980a status=0"
+    },
+    {
+      "step": "an EOA that is not an owner cannot propose",
+      "result": "pass",
+      "detail": "NotOwner · 0x8e27d5d74796ae8e504a9b3a486e78f99bf789c7143c44699eea4b14f60c2e6d status=0"
+    },
+    {
+      "step": "owner 1 proposes 1 LIE (a token whose transfer returns false)",
+      "result": "pass",
+      "detail": "tx 0x722cbebed7724677af059365940f5f2ec70bed89e64a190fb371a41b2764a459 · gas 153363"
+    },
+    {
+      "step": "owner 2 confirms",
+      "result": "pass",
+      "detail": "tx 0x84aee7aab3f5fb4e6ea5b13828c29f3a56f665b41b20c2fe7bdc20f5adea6b06 · gas 64917"
+    },
+    {
+      "step": "SafeERC20 refuses the silent failure",
+      "result": "pass",
+      "detail": "SafeERC20FailedOperation · 0x23c554f6230de0097ef813db2173175fca7d6b5b70dcff5fe8982801a9614e45 status=0"
+    },
+    {
+      "step": "nothing left the wallet and no success event was emitted",
+      "result": "pass",
+      "detail": ""
+    },
+    {
+      "step": "the failed send did not burn the two owners' approval",
+      "result": "pass",
+      "detail": ""
+    },
+    {
+      "step": "owner 2 proposes 0.5 GMB to a contract that refuses money",
+      "result": "pass",
+      "detail": "tx 0x1f5c5f3d5067390f8e1d0dc5ea11d443d7ef7db14b512d46438374753f639365 · gas 132469"
+    },
+    {
+      "step": "owner 3 confirms",
+      "result": "pass",
+      "detail": "tx 0x794a44f8b7056d226e28fc98a8373da613a0cee20b2653f1532f3756156ef3b3 · gas 64917"
+    },
+    {
+      "step": "the send fails loudly with NativeTransferFailed",
+      "result": "pass",
+      "detail": "NativeTransferFailed · 0x952abcf1426e165bd39be4f5aff302016be1104da64162ebf1f944bffa1204ae status=0"
+    },
+    {
+      "step": "the recipient contract is told to start accepting",
+      "result": "pass",
+      "detail": "tx 0xa845fd9632697c35b7e19fbae2165842692deb6434da7c3649f25def5e2724dd · gas 43515"
+    },
+    {
+      "step": "the SAME approval now works — nothing had to be re-approved",
+      "result": "pass",
+      "detail": "tx 0x20459ca865b44060d7a8bab36df4e75b176b8f9d38dcdbe6049f244653b385f2 · gas 73787"
+    },
+    {
+      "step": "0.5 GMB delivered once the obstacle was removed",
+      "result": "pass",
+      "detail": ""
+    },
+    {
+      "step": "block the recipient on USDC (as Circle can)",
+      "result": "pass",
+      "detail": "tx 0xeb7d0273d96bf9c1e6fee29be14c31c106226e32e46e1c9910cf840bba8d7a01 · gas 44056"
+    },
+    {
+      "step": "owner 1 proposes 100 USDC",
+      "result": "pass",
+      "detail": "tx 0x25e22c2aed1cf29bb9c57ff871d1f3c5fdc4881d9f1c97999218b4015c1230ac · gas 153315"
+    },
+    {
+      "step": "owner 3 confirms",
+      "result": "pass",
+      "detail": "tx 0xcccefe2bc236a25559085e5dd33dc65e7997fd58fe167adcb192c4f1687a5241 · gas 64917"
+    },
+    {
+      "step": "a blocklisted recipient reverts the transfer",
+      "result": "pass",
+      "detail": "Blocked · 0x6b273aa5fa8639b86c61c972c64e28be0cd7fac725fb518b18e080b28dd4475a status=0"
+    },
+    {
+      "step": "unblock the recipient",
+      "result": "pass",
+      "detail": "tx 0xd4115603a32a6026d5a6f9b1924d7c54f5fcfed8c5d69d8bb094cd7a1f5105e2 · gas 22144"
+    },
+    {
+      "step": "the same approval goes through",
+      "result": "pass",
+      "detail": "tx 0x5bffa5ce4b7527b0e1e92f8651a69b4f064a082360e30adfde3a6de3bcd5a682 · gas 99379"
+    },
+    {
+      "step": "100 USDC arrived after unblocking",
+      "result": "pass",
+      "detail": ""
+    },
+    {
+      "step": "pause EURC (as Circle can)",
+      "result": "pass",
+      "detail": "tx 0x91455d0a6938220b0dd6710cb1ea6a1ec3f233085473e6683ad2d148abdfca5b · gas 43586"
+    },
+    {
+      "step": "owner 2 proposes 200 EURC",
+      "result": "pass",
+      "detail": "tx 0x31f7c592654aca9360f04e12926dbc116e881479616652802be6ec6db7bd13a4 · gas 153327"
+    },
+    {
+      "step": "owner 1 confirms",
+      "result": "pass",
+      "detail": "tx 0x683f88a6a2339507cebd101426277b67cb05aab19d039f205ae24863f56ad377 · gas 64917"
+    },
+    {
+      "step": "a paused token blocks the send",
+      "result": "pass",
+      "detail": "TokenPaused · 0x4165639b10a14b8fbebfdaa61965db68f21f3482d0c6fe978778568c5eb453cf status=0"
+    },
+    {
+      "step": "unpause EURC",
+      "result": "pass",
+      "detail": "tx 0x37542f76f1a26b6e4bacaa3c48c67325158564d61d10522a3e2e915724cfbde3 · gas 21674"
+    },
+    {
+      "step": "the same approval goes through",
+      "result": "pass",
+      "detail": "tx 0x69ed7f54fa37bd1488ed69680df4702c57e022d8f49934ea6d9d48445a83fd95 · gas 97157"
+    },
+    {
+      "step": "200 EURC arrived after unpausing",
+      "result": "pass",
+      "detail": ""
+    },
+    {
+      "step": "turn on USDT's fee-on-transfer (10 bp, cap 5)",
+      "result": "pass",
+      "detail": "tx 0xa198b2e664c1fb17d657ee8fd9f113a62ecb456b149e670116545c4082579ae1 · gas 65953"
+    },
+    {
+      "step": "owner 3 proposes 100 USDT",
+      "result": "pass",
+      "detail": "tx 0x571d77940af4cd480c4c32ceb857c6d1b9e975e0ca7d1f6400568273681af038 · gas 153327"
+    },
+    {
+      "step": "owner 2 confirms",
+      "result": "pass",
+      "detail": "tx 0xcf4c818fba8642270769431516299b898d3ffc4ad6118cc9f598c9bae9d570f2 · gas 64917"
+    },
+    {
+      "step": "the fee-charging transfer executes",
+      "result": "pass",
+      "detail": "tx 0x52c029e03c259f41f43246defdd3b85f4a0f968138349ecb8ac34a668fdd1a46 · gas 108895"
+    },
+    {
+      "step": "the recipient netted 99.9 USDT after the 0.1 fee — the wallet coped",
+      "result": "pass",
+      "detail": ""
+    },
+    {
+      "step": "ReentrancyAttacker",
+      "result": "pass",
+      "detail": "0x31b76052D405977d671CFa0F3EE8f0514cdc21Ca · gas 636230"
+    },
+    {
+      "step": "PersonalWallet #2 (owners: o1, o2, attacker)",
+      "result": "pass",
+      "detail": "0x2660616e484a188b5E948662867f976d61a8eDA8 · gas 4993230"
+    },
+    {
+      "step": "point the attacker at wallet #2",
+      "result": "pass",
+      "detail": "tx 0xfd543a0284cf87591a34c1059121b28184c2405091344fca069cd3a87115f53a · gas 44192"
+    },
+    {
+      "step": "fund wallet #2 with 1 GMB",
+      "result": "pass",
+      "detail": "tx 0x9d17a24b060e1f2bc442b7fdd0419a9fc7b316f54b619e878969b5ce5502ee54 · gas 22752"
+    },
+    {
+      "step": "owner 1 proposes 0.4 GMB to the attacker contract",
+      "result": "pass",
+      "detail": "tx 0x5737bb5ecb492ef11ecd4368432e43624b54d6d312fae2425b453771f55bc22f · gas 149581"
+    },
+    {
+      "step": "owner 2 confirms — a genuine 2-of-3 approval",
+      "result": "pass",
+      "detail": "tx 0x965a8dcd7e7b42b3bf11b1a959af21d4aa29be0dfc3c60bfdbac1130f9705571 · gas 64917"
+    },
+    {
+      "step": "arm the attacker to re-enter on receipt",
+      "result": "pass",
+      "detail": "tx 0xe4ce268747a8e6294290eaedd7b5413c69611cd476ec46fd663c9e5d8ba64f29 · gas 67865"
+    },
+    {
+      "step": "execute: the attacker is paid AND tries to re-enter",
+      "result": "pass",
+      "detail": "tx 0xddba3332b1533bdfd7bf52df15d988bba17a95a7e2be444f0bbdd0aed4934f6d · gas 106875"
+    },
+    {
+      "step": "the attacker did attempt re-entry",
+      "result": "pass",
+      "detail": "1 attempt(s)"
+    },
+    {
+      "step": "the re-entry was REFUSED by the guard",
+      "result": "pass",
+      "detail": ""
+    },
+    {
+      "step": "exactly 0.4 GMB left wallet #2 — not 0.8",
+      "result": "pass",
+      "detail": "0.4"
+    },
+    {
+      "step": "wallet #2 still holds 0.6 GMB",
+      "result": "pass",
+      "detail": ""
+    },
+    {
+      "step": "disarm the attacker",
+      "result": "pass",
+      "detail": "tx 0x9e30f66d42e4d4294f4297af8aca14bf8718564e0d0c84fe512467ad49cce3c1 · gas 26483"
+    },
+    {
+      "step": "send it a little gas so it can accept",
+      "result": "pass",
+      "detail": "tx 0xe6d74f17d06d9178c1f9c83ae93874f9b9f4fffa305b53ab632d7114883aa28b · gas 21000"
+    },
+    {
+      "step": "owner 1 proposes replacing owner 3",
+      "result": "pass",
+      "detail": "tx 0xef3991ce9cf4dd466836212ccf6fd46cfccacc9c1d210b6b3e661a37f9015491 · gas 181121"
+    },
+    {
+      "step": "it was scheduled, not made immediately executable",
+      "result": "pass",
+      "detail": "delay 259200s · matures 2026-10-14T23:30:42.000Z"
+    },
+    {
+      "step": "the newcomer cannot accept on one approval",
+      "result": "pass",
+      "detail": "NotEnoughConfirmations · 0x4d29bba5544484134bcb8ab6fdfb177d6f9479574fd3325701c51253a56ceedb status=0"
+    },
+    {
+      "step": "owner 2 confirms the replacement",
+      "result": "pass",
+      "detail": "tx 0x8d52ba37751af55a4f0ee98a9c0180d9aa351b798a2b277adbd893092997c9f7 · gas 64917"
+    },
+    {
+      "step": "nobody can accept on the newcomer's behalf",
+      "result": "pass",
+      "detail": "NotIncomingOwner · 0xfb5b170f279f8fd70115416e9f85115540d44a44766788dfb510352b46df18f9 status=0"
+    },
+    {
+      "step": "the newcomer accepts, from its own address",
+      "result": "pass",
+      "detail": "tx 0x2b457f386f979fc386f2f39908923ac9c7156fc611bd27ca12ac24f2362e0957 · gas 49658"
+    },
+    {
+      "step": "🔴 two approvals and an acceptance are STILL not enough — the delay must run",
+      "result": "pass",
+      "detail": "TimelockNotElapsed · 0xa7298f936788e88074b43312133718e27375a771f70c7f5a75a1771db27047c3 status=0"
+    },
+    {
+      "step": "isExecutable reports false while it matures",
+      "result": "pass",
+      "detail": ""
+    },
+    {
+      "step": "🔴 owner 3 — the one being removed — vetoes it alone",
+      "result": "pass",
+      "detail": "tx 0x6a1a06b53a5b6c91d52111bdee2916104645efa2467b18a63597f83b74d99f28 · gas 34716"
+    },
+    {
+      "step": "the proposal is dead",
+      "result": "pass",
+      "detail": ""
+    },
+    {
+      "step": "and it can never execute, however long one waits",
+      "result": "pass",
+      "detail": "ProposalCancelled · 0x5f1894ef094ef014627b035b0e7354a9a27772f75a51eedc4c71ad4b2b4fe681 status=0"
+    },
+    {
+      "step": "owner 3 kept its seat",
+      "result": "pass",
+      "detail": "0xf8e78C23afFFe1A66B82B6095B3BB7d53c8ea5C8, 0xed0c6BF38dA43586fA624e08e5D7e0bC1F99E0D5, 0x900212aDBE3e81C1b5a0F7eAF253B5217395DE52"
+    },
+    {
+      "step": "a plain transfer cannot be vetoed — one owner still cannot block the other two",
+      "result": "pass",
+      "detail": "NotTimelocked · 0x95117f4b5ef82ff7ef97bd3fd5a8a6c866a39cf061ac7ed68c2607e32254c90d status=0"
+    },
+    {
+      "step": "owner 1 proposes, then revokes its own approval",
+      "result": "pass",
+      "detail": "tx 0x1f6ec57d3601207727be8a5208d37981a574b8c09c265d780a11d454969e4776 · gas 132481"
+    },
+    {
+      "step": "owner 2 confirms (now 2 of 3)",
+      "result": "pass",
+      "detail": "tx 0xb6f06437862cfb53fdd8861fb6de75f601b36338b0964f1f191bfd5d958d92fa · gas 64917"
+    },
+    {
+      "step": "isExecutable = true",
+      "result": "pass",
+      "detail": ""
+    },
+    {
+      "step": "owner 2 revokes",
+      "result": "pass",
+      "detail": "tx 0x1a44bc78fee2f70916813d1c6ccb3134fbfabf53f78ed3565163282551d59fbf · gas 41908"
+    },
+    {
+      "step": "isExecutable = false again",
+      "result": "pass",
+      "detail": ""
+    },
+    {
+      "step": "and it cannot be executed",
+      "result": "pass",
+      "detail": "NotEnoughConfirmations · 0x3d73746f3542a42f010b4d8dba52fbefd9b802f7a30862e8bdb4b4c80fa98f50 status=0"
+    },
+    {
+      "step": "the proposer cancels it",
+      "result": "pass",
+      "detail": "tx 0xdb09372540b8ae94a66788e7a5413daefd28f90a1c5b4f2bdaacdc320f99e211 · gas 48393"
+    },
+    {
+      "step": "a cancelled proposal is dead",
+      "result": "pass",
+      "detail": "ProposalCancelled · 0x2c24acef25b3b9eb14477f2149f40d30dd8ffb065cd85fc37d48392d46972486 status=0"
+    },
+    {
+      "step": "owner 1 proposes again and owner 2 confirms",
+      "result": "pass",
+      "detail": "tx 0x43f4e12da4abcdad9cf765d975c77ee153cf4b0a87989ec9d67937615f7b07bd · gas 132481"
+    },
+    {
+      "step": "owner 2 confirms",
+      "result": "pass",
+      "detail": "tx 0x5f29c3c7629333f625116527dd6b70fa3aa23ff43338f49a699be64146ca4677 · gas 64917"
+    },
+    {
+      "step": "now the proposer alone cannot pull it back",
+      "result": "pass",
+      "detail": "ConfirmationsLocked · 0x381f38b4a56fa15382c8a1087d4c5d6750f6df84db9326ffcc5e42a46ebd2b35 status=0"
+    },
+    {
+      "step": "a lifetime below MIN_TTL is refused",
+      "result": "pass",
+      "detail": "BadTtl · 0x61a0d741ce5179276079dcacf72dd211b93c73d0da5de4ebba756d77ca4b19c1 status=0"
+    },
+    {
+      "step": "the zero address is refused as recipient",
+      "result": "pass",
+      "detail": "ZeroAddress · 0xd5370adefe7c1caf1f04c6a58ef825b4728c8b9d1fb054415345d5323ef5d041 status=0"
+    },
+    {
+      "step": "the wallet itself is refused as recipient",
+      "result": "pass",
+      "detail": "SelfRecipient · 0x0618b0cf911467264c0d90c7777d6485c0efda6494365a91b361571be6cf6b03 status=0"
+    },
+    {
+      "step": "a zero amount is refused",
+      "result": "pass",
+      "detail": "ZeroAmount · 0x4d388042e3597b2c9be96213a692d9237369eea29976b67856a19d438a6b5d0e status=0"
+    },
+    {
+      "step": "an empty batch is refused",
+      "result": "pass",
+      "detail": "EmptyBatch · 0xc32d74274550a096914380f02a4cfa13a417c1565b0dfa447a68137a7a1a9920 status=0"
+    },
+    {
+      "step": "replacing a non-owner is refused",
+      "result": "pass",
+      "detail": "SubjectNotOwner · 0xe83720c864048090c4ffde1e9075f740949c3a9b32dcd3294d48db9542198224 status=0"
+    },
+    {
+      "step": "seating an existing owner is refused",
+      "result": "pass",
+      "detail": "DuplicateOwner · 0xe5d5f690af06dc4ec32afb3718f588c5740509061b40445097daff2a03f633c5 status=0"
+    },
+    {
+      "step": "depositNative from the deployer (not an owner)",
+      "result": "pass",
+      "detail": "tx 0x39825dfbe9c8c1128a7dceb11a4079fcf79617dcecb372a376b891ab5ebecc01 · gas 24289"
+    },
+    {
+      "step": "a zero-value deposit is refused",
+      "result": "pass",
+      "detail": "ZeroAmount · 0x23732c177ae773729bee83de7ad69664c993b4916993077495cb42a9ff0a90a2 status=0"
+    },
+    {
+      "step": "clear USDT's transfer fee",
+      "result": "pass",
+      "detail": "tx 0xa2f669c3d6ba3e9a70ea31cfdcd5dac2b6ac7227b36ea9e8e80b08614158592e · gas 25364"
+    },
+    {
+      "step": "mint 200 USDT to the deployer",
+      "result": "pass",
+      "detail": "tx 0x2a6cbb99647bf057fd3560ca3d3caef7cc8461e4f28421f932c6d0e2be8c0140 · gas 33938"
+    },
+    {
+      "step": "approve the wallet for 200 USDT",
+      "result": "pass",
+      "detail": "tx 0xeaa839da05b00b63f98dc1d60d73f0a9c99dc797cd30269116d44d813e958a2f · gas 45883"
+    },
+    {
+      "step": "depositERC20 — the event names WHO deposited",
+      "result": "pass",
+      "detail": "tx 0x6cf119e70e58101a0e669b99e5dccc139daf565a472f3daa4e9039d1d3950d71 · gas 56464"
+    },
+    {
+      "step": "100 USDT arrived through the accounted path",
+      "result": "pass",
+      "detail": ""
+    },
+    {
+      "step": "switch USDT's fee back on (10 bp, cap 5)",
+      "result": "pass",
+      "detail": "tx 0x6b0b5424a8147ea0d424d21bb5a3449bd93eedc05fe8110a65308499b57e3480 · gas 65953"
+    },
+    {
+      "step": "depositERC20 of 100 against a fee-charging token",
+      "result": "pass",
+      "detail": "tx 0xf03eb1bcea8b97ce693a2684d9f629a355d6d39f8cd28fb2ee08e231bd558dcb · gas 56040"
+    },
+    {
+      "step": "🔴 the event reports what ARRIVED, not what was requested",
+      "result": "pass",
+      "detail": "requested 100 · arrived 99.9 · event 99.9"
+    },
+    {
+      "step": "clear the fee again",
+      "result": "pass",
+      "detail": "tx 0x35ee7469080495dd200130f7aec0e780d3c2265105eea126329e002d3dc1db22 · gas 25364"
+    },
+    {
+      "step": "mint ERC-721 #90 to the deployer",
+      "result": "pass",
+      "detail": "tx 0xf51101ec90ce9cdae2eb3fc33b159ee487743a2e26796d06cdd150e6d26cc70d · gas 68452"
+    },
+    {
+      "step": "approve the wallet for all of the collection",
+      "result": "pass",
+      "detail": "tx 0x3853427f9702bc0f4fe5b2ecf2ede73761c8bacaadc92a3d3d18d29d762c5115 · gas 46159"
+    },
+    {
+      "step": "depositERC721",
+      "result": "pass",
+      "detail": "tx 0xcdbcffc3d18f265f60e062acdc72f321c974c88aeb5a9567c4b119f08ad53509 · gas 52167"
+    },
+    {
+      "step": "the NFT is in the wallet",
+      "result": "pass",
+      "detail": ""
+    },
+    {
+      "step": "mint ERC-1155 id 90 ×10 to the deployer",
+      "result": "pass",
+      "detail": "tx 0x021249f87d9edeefc89e7ceca3aa82f1151debce1f41f334e9c15a66420bd014 · gas 47651"
+    },
+    {
+      "step": "approve the wallet for the 1155 collection",
+      "result": "pass",
+      "detail": "tx 0xe92747be90aabcb209f47c627a02177e5f1c53a0623cb15580eb6d06e04a31f0 · gas 46117"
+    },
+    {
+      "step": "depositERC1155",
+      "result": "pass",
+      "detail": "tx 0xa2e6ce0c60a5def8abeb0c51aac2eb8d2d0ca1fc75a9fb9a91d71ccd2a8fb6ac · gas 65416"
+    },
+    {
+      "step": "10 units arrived",
+      "result": "pass",
+      "detail": ""
+    },
+    {
+      "step": "mint ERC-721 #91 to the deployer",
+      "result": "pass",
+      "detail": "tx 0xc3c1d475f4d0b8c34b0e945111d95bf26a3866b68ea2b304375cfd82b36c1ac7 · gas 68452"
+    },
+    {
+      "step": "mint ERC-721 #92 to the deployer",
+      "result": "pass",
+      "detail": "tx 0xcaec68213ba5d35a7f454a4af32cc4add251b215628534c80f4a8ae9c04e5133 · gas 51352"
+    },
+    {
+      "step": "mint ERC-1155 id 91 ×8 to the deployer",
+      "result": "pass",
+      "detail": "tx 0xb09f75595ac22a4de508d9ce5888b7c24d9987d30f5b2a82731018098a30a3c4 · gas 47651"
+    },
+    {
+      "step": "mint ERC-1155 id 92 ×6 to the deployer",
+      "result": "pass",
+      "detail": "tx 0xb1a85284b5c75c4e5aa967f6147b9a3072591bd8d9932e4965dfdbccaebb8cf4 · gas 47651"
+    },
+    {
+      "step": "depositNFTBatch — four items, both standards, one transaction",
+      "result": "pass",
+      "detail": "tx 0x48ee059c82b96eb008c7c5c8119a127016eeb5d9ea805c5f2ea8f605ad044c4e · gas 144601"
+    },
+    {
+      "step": "the whole batch was pulled in",
+      "result": "pass",
+      "detail": ""
+    },
+    {
+      "step": "an empty deposit batch is refused",
+      "result": "pass",
+      "detail": "EmptyBatch · 0x1185781dc1e69260d2ee34551b046d1df359b6d214e297530a3e6cfc74f3f93f status=0"
+    },
+    {
+      "step": "owner 1 proposes allowlisting USDT",
+      "result": "pass",
+      "detail": "tx 0x5511d752a26ad53a6bd2607e3ceb0c98a8c20d78950dfc8daf3b47801b380a47 · gas 135814"
+    },
+    {
+      "step": "not timelocked — allowlisting a token grants no ability to steal",
+      "result": "pass",
+      "detail": ""
+    },
+    {
+      "step": "needs two owners",
+      "result": "pass",
+      "detail": ""
+    },
+    {
+      "step": "a single owner cannot veto it",
+      "result": "pass",
+      "detail": "NotTimelocked · 0x7834d8db644d864417f593b0ae4d788261e6eb8ace0422a2ecd3e010199903c6 status=0"
+    },
+    {
+      "step": "one approval is not enough",
+      "result": "pass",
+      "detail": "NotEnoughConfirmations · 0x7d57b7612c55d7735f5959edb5f229085a3026a69babf7c62dc293ec5bda4808 status=0"
+    },
+    {
+      "step": "owner 2 confirms",
+      "result": "pass",
+      "detail": "tx 0x9a4b486636f5101f4ef26fd297a9827f1888fafeb64afc5fbda883f21efe80e9 · gas 64917"
+    },
+    {
+      "step": "the token is allowlisted",
+      "result": "pass",
+      "detail": "tx 0x7cd8ccff0705717c608a7c764a0a7b77dd7e2641346364ce03e781062e3f15b6 · gas 146329"
+    },
+    {
+      "step": "USDT is on the list",
+      "result": "pass",
+      "detail": ""
+    },
+    {
+      "step": "the list reads back with the owner-supplied label",
+      "result": "pass",
+      "detail": "0x5E5fFf458964032ba6f034eCF4E4291b2EbDB5D6 \"Tether USD\""
+    },
+    {
+      "step": "it cannot be added twice",
+      "result": "pass",
+      "detail": "AlreadyAllowed · 0xf514f25e976dbb273b8f888f8c9682cf1dabdf9a9d64196b0001cbe9523fe60f status=0"
+    },
+    {
+      "step": "owner 1 proposes revoking it",
+      "result": "pass",
+      "detail": "tx 0xf65f64ae2c9944c8017134b5d1d0d2b61478783842934d2fa789f0ca29854134 · gas 111924"
+    },
+    {
+      "step": "owner 2 confirms",
+      "result": "pass",
+      "detail": "tx 0x7c4ce05a443f5fbfbd8e8caf6bc8b0d88d25afb2ea4b14ed0440ab88b92cc744 · gas 64917"
+    },
+    {
+      "step": "it is revoked at once",
+      "result": "pass",
+      "detail": "tx 0x36ca973da8c5bbecabe61458ef821b4aaab67af77fd1b476b02da863b3e8f38d · gas 57989"
+    },
+    {
+      "step": "off the list",
+      "result": "pass",
+      "detail": ""
+    },
+    {
+      "step": "the history keeps the entry, it is just not allowed",
+      "result": "pass",
+      "detail": ""
+    },
+    {
+      "step": "owner 1 proposes allowlisting a destination",
+      "result": "pass",
+      "detail": "tx 0x26469871045089eb14ae2afbcd67e68da0f1dbc1508468dd10e07c40f06dba43 · gas 181329"
+    },
+    {
+      "step": "🔴 it needs all three owners, not two",
+      "result": "pass",
+      "detail": ""
+    },
+    {
+      "step": "and it is timelocked",
+      "result": "pass",
+      "detail": "matures 2026-10-14T23:34:40.000Z"
+    },
+    {
+      "step": "the label is stored with the proposal",
+      "result": "pass",
+      "detail": ""
+    },
+    {
+      "step": "owner 2 confirms — that is two of three",
+      "result": "pass",
+      "detail": "tx 0x6f7844e935d23cf61e0f7f49a0f4dd22206d252ee2c7fe2626ceb73077552229 · gas 64917"
+    },
+    {
+      "step": "🔴 TWO owners cannot push it through",
+      "result": "pass",
+      "detail": "TimelockNotElapsed · 0xb4a4a331b13b880d749e18e93076617b7e828fdb2e44da18046a4e3eedb54474 status=0"
+    },
+    {
+      "step": "and the state says why: 2 of 3 approvals against a requirement of 3, not executable",
+      "result": "pass",
+      "detail": ""
+    },
+    {
+      "step": "owner 3 confirms — now all three agree",
+      "result": "pass",
+      "detail": "tx 0x8970aaecbfe3555ca992029c2c953ba0978d8029c53c9384d88ac7c3405e6cbd · gas 65003"
+    },
+    {
+      "step": "🔴 and even unanimous, the delay must still run",
+      "result": "pass",
+      "detail": "TimelockNotElapsed · 0xe9eefa92fc99cbc5591ad1ded7806f734ec60cdc9e2af5b6d8cb394ba6a7b1d5 status=0"
+    },
+    {
+      "step": "🔴 one owner vetoes it alone",
+      "result": "pass",
+      "detail": "tx 0x656493f596d3d798c42afd309dde6abe4c59c2c1e3525c02c4f7d54d4b59a47e · gas 34716"
+    },
+    {
+      "step": "it is dead for good",
+      "result": "pass",
+      "detail": "ProposalCancelled · 0xc969d80d61a4ca1d39c7d83fc5f56b03efe2207272bf9b55c0974ecbecde8f78 status=0"
+    },
+    {
+      "step": "the destination was never allowlisted",
+      "result": "pass",
+      "detail": ""
+    },
+    {
+      "step": "a SECOND proposal is left pending on purpose",
+      "result": "pass",
+      "detail": "tx 0xfb57efa90668fea3b97af0a44955ef6b85627617bf228610ef9bc04a1a5e33ca · gas 181353"
+    },
+    {
+      "step": "owner 2 confirms",
+      "result": "pass",
+      "detail": "tx 0x6cbbb2b78ddea18b7539a1a1ad40f9a9faa0cc8a7fa06ab9237c2a307edca1e1 · gas 64917"
+    },
+    {
+      "step": "owner 3 confirms — unanimous, just waiting on the clock",
+      "result": "pass",
+      "detail": "tx 0xb477eb70f836d942d90582bf82054afbfc683209d8a35cb1aa9609325c7d699b · gas 65003"
+    },
+    {
+      "step": "left pending so the timelock can be observed maturing on the real chain",
+      "result": "pass",
+      "detail": "#17"
+    },
+    {
+      "step": "owner 1 proposes switching BOTH requirements ON",
+      "result": "pass",
+      "detail": "tx 0x92530408d49762d0754d98b6acb985d516c4942ccb36e8631bdbf42125a2ddb0 · gas 152123"
+    },
+    {
+      "step": "tightening is not timelocked",
+      "result": "pass",
+      "detail": ""
+    },
+    {
+      "step": "owner 2 confirms",
+      "result": "pass",
+      "detail": "tx 0x73bc717716b0abc9e456a19f67a1967f7fd4b1755516c9af7785cc285234755e · gas 64917"
+    },
+    {
+      "step": "it takes effect at once",
+      "result": "pass",
+      "detail": "tx 0x81abe8b7a6205ea0211439a3cf146a253daa1fbc0ea7e2c79b8eb0b607004f0b · gas 63122"
+    },
+    {
+      "step": "both requirements are live",
+      "result": "pass",
+      "detail": ""
+    },
+    {
+      "step": "🔴 with the recipient requirement on, an unlisted destination is refused",
+      "result": "pass",
+      "detail": "RecipientNotAllowed · 0xffe25582fdc3d20edc8a5384d1c039b5087c6662c1516652c5060d70e09a3aa8 status=0"
+    },
+    {
+      "step": "and an unlisted token is refused too",
+      "result": "pass",
+      "detail": "TokenNotAllowed · 0x40b5ed5347e02be4dfdb60c0e8717c575b9e820c651354cd6cd377ebcaa93c4f status=0"
+    },
+    {
+      "step": "owner 1 proposes switching them back OFF",
+      "result": "pass",
+      "detail": "tx 0x2877f2d26b26489abf30ef7db886d3fd6995f637c6a3e1fb5c2925194ee3046e · gas 156426"
+    },
+    {
+      "step": "🔴 loosening IS timelocked — an attacker cannot just switch the control off",
+      "result": "pass",
+      "detail": ""
+    },
+    {
+      "step": "owner 2 confirms",
+      "result": "pass",
+      "detail": "tx 0xd7b172e684de5e2a6beaa1d7a3480d59c8b43db3b5e64be2ec7d3d514d8e537a · gas 64917"
+    },
+    {
+      "step": "it cannot be applied yet",
+      "result": "pass",
+      "detail": "TimelockNotElapsed · 0xf7c2f22937dac4e2dce6fd1e499ff1ab0d66e406b9e6d781532bbfef558bfe32 status=0"
+    },
+    {
+      "step": "🔴 one owner vetoes the loosening",
+      "result": "pass",
+      "detail": "tx 0x7e2e48432214791c5b610136af6195a4f211fcfd67dc04d164ada0b0c8300e83 · gas 34716"
+    },
+    {
+      "step": "so the requirement stays on",
+      "result": "pass",
+      "detail": "ProposalCancelled · 0x5c8fd8164ca79a1b113cf9adeb112a97aa219c770e8e54682072f8dcdf0b665d status=0"
+    },
+    {
+      "step": "still enforced",
+      "result": "pass",
+      "detail": ""
+    },
+    {
+      "step": "a delay below the floor is refused",
+      "result": "pass",
+      "detail": "BadDelay · 0x56b123912dfd58f76cc7523a9e369b4ee39df6a2dcdd8bec3d063b5ee5c51d72 status=0"
+    },
+    {
+      "step": "a delay above the ceiling is refused",
+      "result": "pass",
+      "detail": "BadDelay · 0x98b7e5e9785ee4708e36c5afbcf344d381d7529066aeaadda2af48e5dd4751bb status=0"
+    },
+    {
+      "step": "a policy proposal that changes nothing is refused",
+      "result": "pass",
+      "detail": "NoPolicyChange · 0xb40b17488c82b23108ce116225dcf6dfbdaf872969b9335d95a68f96166eb0ca status=0"
+    },
+    {
+      "step": "a LONGER delay is accepted and applies at once",
+      "result": "pass",
+      "detail": "tx 0xb5c19673fc414002d08fe018b7723d4e349c927df3b8c6b7bc45c3a63e1807b2 · gas 152116"
+    },
+    {
+      "step": "owner 2 confirms",
+      "result": "pass",
+      "detail": "tx 0xcc90fd27fd321ae95b94aedbc37cfe654acacce70e09dba0439b3ca8ca2cc1ec · gas 64917"
+    },
+    {
+      "step": "applied",
+      "result": "pass",
+      "detail": "tx 0x10aaeb44ede3f8bfd8546bdc649858d96cff1b9e5d9ef0b758abc1ff2db4ec67 · gas 63122"
+    },
+    {
+      "step": "the delay is now 5 days",
+      "result": "pass",
+      "detail": ""
+    },
+    {
+      "step": "PersonalWallet #3 (strict, cold address seeded)",
+      "result": "pass",
+      "detail": "0x244ea77d96E8D53cc9d59A279eECef3A421aA8D3 · gas 5250627"
+    },
+    {
+      "step": "fund wallet #3 with 1 GMB",
+      "result": "pass",
+      "detail": "tx 0x90bc181c2b5af7fceb2ccac3359600319c6d510c1231a5771ac80a465cc90923 · gas 22752"
+    },
+    {
+      "step": "mint 100 USDT into wallet #3",
+      "result": "pass",
+      "detail": "tx 0x792d646005d4ad0ead0cfc5b4db773d9de9d3eb82d28435665d0e3ade28bb43c · gas 51038"
+    },
+    {
+      "step": "both requirements are live from the constructor",
+      "result": "pass",
+      "detail": ""
+    },
+    {
+      "step": "the seeded cold address is active immediately",
+      "result": "pass",
+      "detail": ""
+    },
+    {
+      "step": "both seeded tokens are active immediately",
+      "result": "pass",
+      "detail": ""
+    },
+    {
+      "step": "a transfer to the seeded cold address — the escape hatch",
+      "result": "pass",
+      "detail": "tx 0xdb3f5c0155e9a52e1139c5728a234109c2f6a7e736792a360cd5198664280483 · gas 151799"
+    },
+    {
+      "step": "owner 2 confirms",
+      "result": "pass",
+      "detail": "tx 0x240c04e1935c28392f743641e232f4f5633218ea98813c5699cd9628300a8a86 · gas 64917"
+    },
+    {
+      "step": "it goes through on two of three, as always",
+      "result": "pass",
+      "detail": "tx 0xaa6f73a96ab66d7ea4533a885d62bf6113fc0f184884f491386c74de3b017877 · gas 98819"
+    },
+    {
+      "step": "0.4 GMB delivered to the cold address",
+      "result": "pass",
+      "detail": ""
+    },
+    {
+      "step": "🔴 but ANY other destination is refused outright",
+      "result": "pass",
+      "detail": "RecipientNotAllowed · 0xff905cbac046420cc3b08cd7cca225148d715d106f22a27fde1eac62472d55f2 status=0"
+    },
+    {
+      "step": "🔴 including an owner's own address",
+      "result": "pass",
+      "detail": "RecipientNotAllowed · 0xaf9898ccfc6a61f019f6ddc5852e9221fd42b79df5417ca39669aea488681723 status=0"
+    },
+    {
+      "step": "an unlisted token is refused",
+      "result": "pass",
+      "detail": "TokenNotAllowed · 0xf6d8f70ff4a1c3e98c7dcf1ca60353b961118949efeaa75873613d903d008ec3 status=0"
+    },
+    {
+      "step": "a listed token to the listed destination works",
+      "result": "pass",
+      "detail": "tx 0xfcf78b87d85f92233530ae08f1247cd111266fd4888af15eec58e1c9ce80e305 · gas 157775"
+    },
+    {
+      "step": "owner 2 confirms",
+      "result": "pass",
+      "detail": "tx 0x25092490ee5050d3971183b9b3a824cc6f843758b6e23f0532041cce82c07ef4 · gas 64917"
+    },
+    {
+      "step": "and executes",
+      "result": "pass",
+      "detail": "tx 0x87635fb6a338380ff42fbe413d9e4b230ffca4c903dbd8bdc4e6266f3a63cf62 · gas 104155"
+    },
+    {
+      "step": "50 USDT delivered",
+      "result": "pass",
+      "detail": ""
+    },
+    {
+      "step": "1 · they cannot send to their own address",
+      "result": "pass",
+      "detail": "RecipientNotAllowed · 0x816f01966794f60c6318dc72c6a5f37239d3ce6737a34c6aa6d8ce2696c9a7b5 status=0"
+    },
+    {
+      "step": "2 · they propose allowlisting an attacker address",
+      "result": "pass",
+      "detail": "tx 0x8341ce47e6ca9655c91e61d21768e48bc71296284678a051cd74a466821a30a6 · gas 181281"
+    },
+    {
+      "step": "the second compromised key confirms",
+      "result": "pass",
+      "detail": "tx 0x6448af32d451d20e4eb022f8790025b3c5a2e9076c2c071567e0e6b257687f56 · gas 64917"
+    },
+    {
+      "step": "two keys cannot reach the unanimous threshold",
+      "result": "pass",
+      "detail": "2 of 3"
+    },
+    {
+      "step": "and it is refused",
+      "result": "pass",
+      "detail": "TimelockNotElapsed · 0x26f7d205261c0aacf5dce27c1c0f77fc78cc0ecb2930ad621161f1cdd5839ba0 status=0"
+    },
+    {
+      "step": "even if the third were tricked into confirming",
+      "result": "pass",
+      "detail": "tx 0x80cccafea9966a43338cf7921be7259d0f65a74946bb855436bcc555c6a2fc6d · gas 65003"
+    },
+    {
+      "step": "🔴 the honest owner vetoes it alone",
+      "result": "pass",
+      "detail": "tx 0x20bb57f8e9208f205d4348c9e1f355dcbf7c9b983fb491625d95592cb79f362b · gas 34716"
+    },
+    {
+      "step": "and the address is never allowlisted",
+      "result": "pass",
+      "detail": "ProposalCancelled · 0x9da8a64345772e5b042bfc8a36be1539a066ddb75c439209cd0db02d39796b56 status=0"
+    },
+    {
+      "step": "3 · they propose switching the requirement off",
+      "result": "pass",
+      "detail": "tx 0x88e272c4ca45ce56f1334fed75392b0d1631b76fa6237f49d0c4686cbb92e5e7 · gas 176327"
+    },
+    {
+      "step": "the second key confirms",
+      "result": "pass",
+      "detail": "tx 0x6daec1a4fc1d0821a253e92aab590ce49b8218937a4234e4fd2e5d3fe60d8818 · gas 64917"
+    },
+    {
+      "step": "🔴 the honest owner vetoes that too",
+      "result": "pass",
+      "detail": "tx 0xcaefe34e2c936467a9d91d7431c568ca8eecee9fdf2b42b18510430e63424a29 · gas 34716"
+    },
+    {
+      "step": "the control stays on",
+      "result": "pass",
+      "detail": "ProposalCancelled · 0x55a2948641d8c9e7229582f927adb952c0ec5fe2c2d9ec64a5ee982ab304763e status=0"
+    },
+    {
+      "step": "4 · they propose taking the honest owner's seat",
+      "result": "pass",
+      "detail": "tx 0x18d876972edbd898378a2d63dfe27e4cffc413df1db86164528436f1a3c377c9 · gas 181121"
+    },
+    {
+      "step": "the second key confirms",
+      "result": "pass",
+      "detail": "tx 0xeccf22739b2323b96f355fff6a2db630caa30908218412400e1ed85dc330a7b6 · gas 64917"
+    },
+    {
+      "step": "🔴 the honest owner vetoes it",
+      "result": "pass",
+      "detail": "tx 0x50130019cde1d3da068e78964f69bba6510b3c5f9b7a0f6049009ae1818f1793 · gas 34716"
+    },
+    {
+      "step": "the seat is kept",
+      "result": "pass",
+      "detail": "ProposalCancelled · 0x16c34681b4d4c01f826ca261aac05e15815f2dae9533eecb1b5e496ebe824070 status=0"
+    },
+    {
+      "step": "owner 3 still holds its seat",
+      "result": "pass",
+      "detail": ""
+    },
+    {
+      "step": "🔴 nothing was stolen",
+      "result": "pass",
+      "detail": "the wallet still holds 0.6 GMB and 50.0 USDT"
+    }
+  ]
+}

@@ -1,0 +1,52 @@
+{
+  "network": "gembatestnet",
+  "chainId": 821207,
+  "deployedAt": "2026-10-11T21:33:28.025Z",
+  "localTime": "2026-10-12 00:33:28 +03:00",
+  "deployer": "0x52a15dfbeB25cC4Cca45eA51d7289009d44B092b",
+  "explorer": "https://gembascan.io",
+  "run": "verify-test-mocks",
+  "contracts": [
+    {
+      "name": "MockUSDC",
+      "fullyQualifiedName": "contracts/mocks/TestTokens.sol:MockUSDC",
+      "address": "0x2EE1CaEc04577ceD8127ba72AD59e9dD383A7c72",
+      "constructorArgs": [],
+      "txHash": "0xfc6f7648b87c724a3b92b4d5dd2db35b2caeeb3085320f30aa5ba46fa489ea98",
+      "block": 3974641,
+      "gasUsed": "617874",
+      "compiler": {
+        "version": "0.8.28",
+        "optimizer": {
+          "enabled": true,
+          "runs": 200
+        },
+        "evmVersion": "cancun"
+      },
+      "explorer": "https://gembascan.io/address/0x2EE1CaEc04577ceD8127ba72AD59e9dD383A7c72",
+      "verified": null
+    },
+    {
+      "name": "MockERC721",
+      "fullyQualifiedName": "contracts/mocks/TestTokens.sol:MockERC721",
+      "address": "0xd96877cEC3259cc7eb8A81dF92fca18Fceaf76D1",
+      "constructorArgs": [
+        "Verify Probe",
+        "VPRB"
+      ],
+      "txHash": "0x5aec58e91184133382bee36271fa6c0602f092430a8323aaef5157693cb246ba",
+      "block": 3974644,
+      "gasUsed": "971840",
+      "compiler": {
+        "version": "0.8.28",
+        "optimizer": {
+          "enabled": true,
+          "runs": 200
+        },
+        "evmVersion": "cancun"
+      },
+      "explorer": "https://gembascan.io/address/0xd96877cEC3259cc7eb8A81dF92fca18Fceaf76D1",
+      "verified": null
+    }
+  ]
+}

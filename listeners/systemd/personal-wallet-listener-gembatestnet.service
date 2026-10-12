@@ -1,0 +1,45 @@
+[Unit]
+Description=PersonalWallet event listener — gembatestnet (polls the chain, emails on events)
+Documentation=file:/home/slavy/personal_wallet/listeners/README.md
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=slavy
+Group=slavy
+WorkingDirectory=/home/slavy/personal_wallet
+Environment=NODE_ENV=production
+# Secrets are NOT here. They are read from /home/slavy/personal_wallet/.env (mode 600) by dotenv,
+# the same way every other service on this box does it, so nothing sensitive reaches journald or
+# `systemctl show`.
+ExecStart=/usr/bin/node /home/slavy/personal_wallet/listeners/run.js gembatestnet
+
+# The listener keeps its position on disk, so a restart resumes rather than skipping. Restarting
+# always (not just on-failure) matters because a clean exit after SIGTERM from a transient network
+# manager event would otherwise leave the chain unwatched.
+Restart=always
+RestartSec=15
+# Give the current poll cycle time to finish and save its position before being killed.
+TimeoutStopSec=90
+
+# It needs the network, its own directory and nothing else.
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=read-only
+ReadWritePaths=/home/slavy/personal_wallet/.listener-state
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+RestrictSUIDSGID=true
+RestrictRealtime=true
+LockPersonality=true
+MemoryMax=512M
+
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=pw-listener-gembatestnet
+
+[Install]
+WantedBy=multi-user.target

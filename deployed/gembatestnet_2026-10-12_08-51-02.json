@@ -1,0 +1,129 @@
+{
+  "network": "gembatestnet",
+  "chainId": 821207,
+  "deployedAt": "2026-10-12T05:51:02.717Z",
+  "localTime": "2026-10-12 08:51:02 +03:00",
+  "deployer": "0x2786e48814C2E562A92aE53187b848DBB312d1a4",
+  "explorer": "https://gembascan.io",
+  "run": "mock-tokens",
+  "contracts": [
+    {
+      "name": "MockUSDT",
+      "fullyQualifiedName": "contracts/mocks/TestTokens.sol:MockUSDT",
+      "address": "0x21c1b5a01431dEc11e4A318Cab6c1B08760af85B",
+      "constructorArgs": [],
+      "txHash": "0x035fe4a0562cf4cbd293d3dd05aaf6a0b71bb2560b8a87dd828c421c3a4a64ab",
+      "block": 3987308,
+      "gasUsed": "455354",
+      "compiler": {
+        "version": "0.8.28",
+        "optimizer": {
+          "enabled": true,
+          "runs": 200
+        },
+        "evmVersion": "cancun",
+        "viaIR": true
+      },
+      "explorer": "https://gembascan.io/address/0x21c1b5a01431dEc11e4A318Cab6c1B08760af85B",
+      "verified": {
+        "result": "already",
+        "at": "2026-10-12T05:59:24.302Z"
+      }
+    },
+    {
+      "name": "MockUSDC",
+      "fullyQualifiedName": "contracts/mocks/TestTokens.sol:MockUSDC",
+      "address": "0xA3D8263b75302Bf875F1963aF53cAbce8d605bd0",
+      "constructorArgs": [],
+      "txHash": "0x134ecb9dd86b8aa143b8af598e6a932296ca53b4a3ff66c0d954eb6da9a83f82",
+      "block": 3987311,
+      "gasUsed": "586219",
+      "compiler": {
+        "version": "0.8.28",
+        "optimizer": {
+          "enabled": true,
+          "runs": 200
+        },
+        "evmVersion": "cancun",
+        "viaIR": true
+      },
+      "explorer": "https://gembascan.io/address/0xA3D8263b75302Bf875F1963aF53cAbce8d605bd0",
+      "verified": {
+        "result": "verified",
+        "at": "2026-10-12T05:59:45.592Z"
+      }
+    },
+    {
+      "name": "MockEURC",
+      "fullyQualifiedName": "contracts/mocks/TestTokens.sol:MockEURC",
+      "address": "0x507C2C47B2cEEeB625471d4F5958BEcd55031b6d",
+      "constructorArgs": [],
+      "txHash": "0x59509d200af3349c25d9c0e5b431170ec01bca3ed7ebc685315ab11e01cf3ae6",
+      "block": 3987313,
+      "gasUsed": "546208",
+      "compiler": {
+        "version": "0.8.28",
+        "optimizer": {
+          "enabled": true,
+          "runs": 200
+        },
+        "evmVersion": "cancun",
+        "viaIR": true
+      },
+      "explorer": "https://gembascan.io/address/0x507C2C47B2cEEeB625471d4F5958BEcd55031b6d",
+      "verified": {
+        "result": "verified",
+        "at": "2026-10-12T06:00:10.749Z"
+      }
+    },
+    {
+      "name": "MockERC721",
+      "fullyQualifiedName": "contracts/mocks/TestTokens.sol:MockERC721",
+      "address": "0x288B1FC1DEFd6e6F7E2e76B0Ee5Ecd6789248B60",
+      "constructorArgs": [
+        "Gemba Wallet Test NFT",
+        "GWTEST"
+      ],
+      "txHash": "0x1e526e6f5756ec3d3c3ba7a3ca54ec4ccb2266ce1f9f5222265221c36b92643b",
+      "block": 3987314,
+      "gasUsed": "847762",
+      "compiler": {
+        "version": "0.8.28",
+        "optimizer": {
+          "enabled": true,
+          "runs": 200
+        },
+        "evmVersion": "cancun",
+        "viaIR": true
+      },
+      "explorer": "https://gembascan.io/address/0x288B1FC1DEFd6e6F7E2e76B0Ee5Ecd6789248B60",
+      "verified": {
+        "result": "already",
+        "at": "2026-10-12T06:00:11.687Z"
+      }
+    },
+    {
+      "name": "MockERC1155",
+      "fullyQualifiedName": "contracts/mocks/TestTokens.sol:MockERC1155",
+      "address": "0x9f2eC00072EBd2Ba8d1E31cF6f994FA62dcdC037",
+      "constructorArgs": [],
+      "txHash": "0x76e0fb10062fa4d1ad8be3b21abf8ea985892be1a34cd7c48f95375015ea4e11",
+      "block": 3987315,
+      "gasUsed": "1086887",
+      "compiler": {
+        "version": "0.8.28",
+        "optimizer": {
+          "enabled": true,
+          "runs": 200
+        },
+        "evmVersion": "cancun",
+        "viaIR": true
+      },
+      "explorer": "https://gembascan.io/address/0x9f2eC00072EBd2Ba8d1E31cF6f994FA62dcdC037",
+      "verified": {
+        "result": "already",
+        "at": "2026-10-12T06:00:12.949Z"
+      }
+    }
+  ]
+}

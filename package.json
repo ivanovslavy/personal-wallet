@@ -1,0 +1,40 @@
+{
+  "name": "personal-wallet",
+  "version": "1.0.0",
+  "description": "PersonalWallet — 2-of-3 multisig savings wallet for native, ERC-20, ERC-721 and ERC-1155. Not a proxy.",
+  "private": true,
+  "scripts": {
+    "build": "hardhat compile",
+    "test": "hardhat test",
+    "coverage": "COVERAGE=true hardhat coverage",
+    "deploy:gemba": "hardhat run scripts/deploy.js --network gembatestnet",
+    "deploy:sepolia": "hardhat run scripts/deploy.js --network sepolia",
+    "deploy:bsc": "hardhat run scripts/deploy.js --network bsc",
+    "deploy:polygon": "hardhat run scripts/deploy.js --network polygon",
+    "deploy:mainnet": "hardhat run scripts/deploy.js --network mainnet",
+    "verify:gemba": "hardhat run scripts/verify.js --network gembatestnet",
+    "verify:sepolia": "hardhat run scripts/verify.js --network sepolia",
+    "verify:bsc": "hardhat run scripts/verify.js --network bsc",
+    "verify:polygon": "hardhat run scripts/verify.js --network polygon",
+    "verify:mainnet": "hardhat run scripts/verify.js --network mainnet",
+    "live:gemba": "hardhat run scripts/live-gembatestnet.js --network gembatestnet",
+    "slither": "PATH=$HOME/.venvs/slither/bin:$PATH slither . --config-file slither.config.json",
+    "slither:all": "PATH=$HOME/.venvs/slither/bin:$PATH slither . --hardhat-ignore-compile",
+    "export:abi": "hardhat run scripts/export-abi.js",
+    "deploy:mocks:gemba": "hardhat run scripts/deploy-mocks.js --network gembatestnet",
+    "check:secrets": "bash scripts/check-secrets.sh",
+    "hooks:install": "bash scripts/install-hooks.sh",
+    "listeners:probe": "node listeners/probe.js"
+  },
+  "license": "MIT",
+  "devDependencies": {
+    "@nomicfoundation/hardhat-toolbox": "^6.1.2",
+    "@openzeppelin/contracts": "^5.6.1",
+    "hardhat": "^2.29.1"
+  },
+  "dependencies": {
+    "dotenv": "^17.4.2",
+    "ethers": "^6.17.0",
+    "nodemailer": "^10.1.0"
+  }
+}

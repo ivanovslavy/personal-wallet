@@ -1,0 +1,47 @@
+# ─── SECRETS ─────────────────────────────────────────────────────────────────────────────────
+# Nothing here is ever committed. `npm run check:secrets` enforces it as well, because a
+# .gitignore only protects files nobody has already added with `git add -f`.
+.env
+.env.*
+!.env.example
+*.key
+*.pem
+id_rsa*
+id_ed25519*
+*.keystore
+keystore/
+secrets/
+allbotinfo*
+*.pass
+*passwords*
+
+# Listener runtime state (positions, counters) — machine-local, not source
+.listener-state/
+
+# ─── BUILD AND TOOLING OUTPUT ────────────────────────────────────────────────────────────────
+node_modules/
+artifacts/
+cache/
+coverage/
+coverage.json
+typechain-types/
+
+# Deployment records are KEPT on purpose: addresses, constructor arguments and compiler settings
+# are what make a deployment verifiable later, and none of it is secret. Only machine-local
+# scratch records are ignored.
+deployed/*.local.json
+
+# ─── LOCAL ROLLBACK COPY ─────────────────────────────────────────────────────────────────────
+# v1/ is a frozen snapshot of the project as it stood before the registries and the timelock were
+# added — contract, tests, scripts and the compiled build-info, with checksums. It is kept on disk
+# so a rollback or a re-verification of an already-deployed v1 contract is possible, and it is
+# deliberately NOT published: its CHECKSUMS.sha256 covers build artefacts that are themselves
+# ignored, so a published copy could never verify.
+v1/
+
+# ─── EDITOR / OS ─────────────────────────────────────────────────────────────────────────────
+.DS_Store
+*.swp
+*~
+.idea/
+.vscode/

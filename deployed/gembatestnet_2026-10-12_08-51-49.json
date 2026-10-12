@@ -1,0 +1,69 @@
+{
+  "network": "gembatestnet",
+  "chainId": 821207,
+  "deployedAt": "2026-10-12T05:51:49.969Z",
+  "localTime": "2026-10-12 08:51:49 +03:00",
+  "deployer": "0x2786e48814C2E562A92aE53187b848DBB312d1a4",
+  "explorer": "https://gembascan.io",
+  "contracts": [
+    {
+      "name": "PersonalWallet",
+      "fullyQualifiedName": "contracts/PersonalWallet.sol:PersonalWallet",
+      "address": "0x3F6357a74Bec93F6281aA1FC705133eC71a1BaE2",
+      "constructorArgs": [
+        [
+          "0x8eB8Bf106EbC9834a2586D04F73866C7436Ce298",
+          "0x3A9Da2349caE432F46A04737d5F4c5EF9ef11973",
+          "0xc45112B334822811f4418e2f13C2C80FF790C949"
+        ],
+        false,
+        true,
+        [
+          "0x2786e48814C2E562A92aE53187b848DBB312d1a4"
+        ],
+        [
+          "deployer / escape hatch"
+        ],
+        [
+          "0xF61647866ad7be8137230Ad688092D2f3F4A1666",
+          "0xc9af98AD8ae78086620821F9Ceb05842Dd7950CF",
+          "0x7Ff43282d7939418a3f0A308E2d48Dd93536044e",
+          "0x21c1b5a01431dEc11e4A318Cab6c1B08760af85B",
+          "0xA3D8263b75302Bf875F1963aF53cAbce8d605bd0",
+          "0x507C2C47B2cEEeB625471d4F5958BEcd55031b6d",
+          "0x288B1FC1DEFd6e6F7E2e76B0Ee5Ecd6789248B60",
+          "0x9f2eC00072EBd2Ba8d1E31cF6f994FA62dcdC037"
+        ],
+        [
+          "USDT (faucet)",
+          "USDC (faucet)",
+          "EURC (faucet)",
+          "MockUSDT",
+          "MockUSDC",
+          "MockEURC",
+          "MockERC721",
+          "MockERC1155"
+        ]
+      ],
+      "txHash": "0x713ab7a00d4cfb641efe0c64bd45c8f81a87854afd52abfddbae289e89141568",
+      "block": 3987325,
+      "gasUsed": "5676691",
+      "compiler": {
+        "version": "0.8.28",
+        "optimizer": {
+          "enabled": true,
+          "runs": 200
+        },
+        "evmVersion": "cancun",
+        "viaIR": true
+      },
+      "explorer": "https://gembascan.io/address/0x3F6357a74Bec93F6281aA1FC705133eC71a1BaE2",
+      "verified": null
+    }
+  ],
+  "owners": [
+    "0x8eB8Bf106EbC9834a2586D04F73866C7436Ce298",
+    "0x3A9Da2349caE432F46A04737d5F4c5EF9ef11973",
+    "0xc45112B334822811f4418e2f13C2C80FF790C949"
+  ]
+}
