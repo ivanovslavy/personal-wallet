@@ -84,6 +84,9 @@ async function main() {
     watchIncoming: cfg.watchIncoming,
     watchFailed: cfg.watchFailed,
     maxFailedScanBlocks: cfg.maxFailedScanBlocks,
+    anomalyMailMs: cfg.anomalyMailMs,
+    summaryMs: cfg.summaryMs,
+    mailOnSwitch: cfg.mailOnSwitch,
     log,
   });
 

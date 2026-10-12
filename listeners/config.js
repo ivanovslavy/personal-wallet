@@ -130,6 +130,14 @@ function networkConfig(net) {
     watchIncoming: asBool(cfg(net, "WATCH_INCOMING"), true),
     watchFailed: asBool(cfg(net, "WATCH_FAILED"), true),
     maxFailedScanBlocks: Number(cfg(net, "MAX_FAILED_SCAN_BLOCKS", "300")),
+    // Alert cadence. All three are per-network and come from the env, so a mainnet listener can
+    // be made quieter or louder than a testnet one without touching code.
+    //   <NET>_ANOMALY_MAIL_MS  how often a FAILURE digest may go out        (default 30 min)
+    //   <NET>_SUMMARY_MS       the one-per-period heartbeat, 0 = none       (default 24 h)
+    //   <NET>_MAIL_ON_SWITCH   mail the moment the active endpoint changes  (default false)
+    anomalyMailMs: Number(cfg(net, "ANOMALY_MAIL_MS", String(30 * 60_000))),
+    summaryMs: Number(cfg(net, "SUMMARY_MS", String(24 * 60 * 60_000))),
+    mailOnSwitch: asBool(cfg(net, "MAIL_ON_SWITCH"), false),
     addresses: watch,
     endpoints: eps,
   };

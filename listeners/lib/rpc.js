@@ -65,6 +65,13 @@ class RpcPool {
     }));
     if (this.endpoints.length === 0) throw new Error(`${this.name}: no RPC endpoints configured`);
     this.current = null;
+    // WHY A MAP AND NOT ONE VALUE: calls do not all have the same requirement. scanIncoming asks
+    // for "logsWithoutAddress" and only some endpoints serve it; getBlockNumber asks for nothing
+    // and takes the first free one. With a single `current` the two call classes overwrite each
+    // other EVERY CYCLE, and each overwrite looked like an endpoint switch — 40 "anomalies" in
+    // 30 minutes on sepolia with nothing whatsoever wrong. A switch is a change WITHIN one
+    // capability bucket; alternating between buckets is just normal routing.
+    this.currentBy = new Map();
   }
 
   /** Endpoints that are not in cooldown, in preference order. */
@@ -121,13 +128,15 @@ class RpcPool {
         try {
           provider = this._provider(e);
           const out = await fn(provider);
-          if (this.current !== e.label) {
-            const from = this.current;
-            this.current = e.label;
-            this.log(`${this.name}: using ${e.label}`, { url: redact(e.url) });
-            // Only report a CHANGE, and only after something was already in use — the first
-            // selection at startup is not an anomaly.
-            if (from) this.onAnomaly({ type: "switched", from, to: e.label, round });
+          this.current = e.label;
+          const bucket = cap || "";
+          const from = this.currentBy.get(bucket);
+          if (from !== e.label) {
+            this.currentBy.set(bucket, e.label);
+            this.log(`${this.name}: using ${e.label}`, { url: redact(e.url), capability: cap || null });
+            // Only report a CHANGE WITHIN THE SAME BUCKET, and only after something was already
+            // in use there — the first selection at startup is not an anomaly.
+            if (from) this.onAnomaly({ type: "switched", from, to: e.label, round, capability: cap || null });
           }
           e.successes++;
           e.failures = 0;

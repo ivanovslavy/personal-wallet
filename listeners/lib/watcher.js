@@ -68,6 +68,12 @@ class Watcher {
       // RPC anomalies are aggregated and sent at most this often, so a flapping endpoint cannot
       // turn the alerting into a flood.
       anomalyMailMs: 30 * 60_000,
+      // ONE HEARTBEAT PER DAY, carrying the counters. Set to 0 to send none. This is the only
+      // mail that goes out when nothing is wrong — everything else is triggered by an event.
+      summaryMs: 24 * 60 * 60_000,
+      // A real endpoint change is already described in the failure digest that caused it. Turn
+      // this on to also get it the moment it happens.
+      mailOnSwitch: false,
       log: () => {},
     }, o);
     this.addresses = o.addresses.map((a) => a.toLowerCase());
@@ -77,10 +83,15 @@ class Watcher {
     this.inBackoff = false;
     this.anomalies = [];
     this.lastAnomalyMail = 0;
+    // Running counters for the daily heartbeat. Switches land here instead of in an email.
+    this.tally = { switches: 0, failures: 0, since: new Date().toISOString() };
+    this.lastSummaryMail = Date.now();
 
     // The pool reports; the watcher decides. Collected here and mailed on a timer rather than
     // one message per event.
     this.pool.onAnomaly = (a) => {
+      if (a.type === "switched") this.tally.switches++;
+      if (a.type === "endpointFailed") this.tally.failures++;
       this.anomalies.push({ ...a, at: new Date().toISOString() });
       if (this.anomalies.length > 50) this.anomalies.splice(0, this.anomalies.length - 50);
     };
@@ -147,6 +158,7 @@ class Watcher {
       }
 
       await this.reportAnomalies();
+      await this.reportSummary();
       const wait = this.inBackoff ? this.backoffMs : this.pollMs;
       if (this.inBackoff) this.log(`${this.network}: backing off for ${wait / 60000} minutes before retrying`);
       await this.sleep(wait);
@@ -164,21 +176,30 @@ class Watcher {
   }
 
   /**
-   * Sends up a digest of RPC anomalies — an endpoint going down, the active one changing.
-   * Rate-limited and aggregated, because a flapping endpoint would otherwise produce an email
-   * per flap. Switching endpoints is normal and successful behaviour; it is reported so a
-   * degrading provider is visible, not because anything is broken.
+   * Sends a digest of RPC anomalies — but ONLY when an endpoint actually failed.
+   *
+   * 🔴 A SWITCH ON ITS OWN IS NOT NEWS. The pool routes each call to an endpoint that can serve
+   * it, so the active endpoint legitimately changes between call classes. Mailing that produced
+   * 48 messages a day saying "0 failures, 40 switches" — noise that buries the one message that
+   * matters. Switches are counted into the daily heartbeat (reportSummary) and are described in
+   * full inside the failure digest they belong to; set mailOnSwitch to get them live.
+   * "allFailed" and "cannot read the chain" have their own, louder mails and are not folded in.
    */
   async reportAnomalies() {
     if (this.anomalies.length === 0) return;
+    const hasFailure = this.anomalies.some((a) => a.type === "endpointFailed");
+    if (!hasFailure && !this.mailOnSwitch) {
+      // Nothing failed. Keep the events for the daily heartbeat's context and send no mail.
+      if (this.anomalies.length > 50) this.anomalies.splice(0, this.anomalies.length - 50);
+      return;
+    }
     const since = Date.now() - this.lastAnomalyMail;
     if (this.lastAnomalyMail && since < this.anomalyMailMs) return;
 
     const items = this.anomalies.splice(0, this.anomalies.length);
     const switched = items.filter((a) => a.type === "switched");
     const failed = items.filter((a) => a.type === "endpointFailed");
-    // "allFailed" has its own, louder email; it is not folded into this digest.
-    if (switched.length === 0 && failed.length === 0) return;
+    if (failed.length === 0 && !this.mailOnSwitch) return;
 
     const lines = [
       `${items.length} RPC anomal${items.length === 1 ? "y" : "ies"} on ${this.network}.`,
@@ -208,6 +229,41 @@ class Watcher {
       subject: `[${this.network}] ${failed.length} RPC failure(s), ${switched.length} switch(es)`,
       text: lines.join("\n"),
     });
+  }
+
+  /**
+   * ONE heartbeat per summaryMs, carrying the counters since the last one. This is deliberately
+   * the ONLY mail that goes out when nothing is wrong: it proves the listener is alive, which a
+   * silent listener cannot. Everything else in here is triggered by an actual event.
+   * summaryMs = 0 switches it off entirely.
+   */
+  async reportSummary() {
+    if (!this.summaryMs) return;
+    if (Date.now() - this.lastSummaryMail < this.summaryMs) return;
+
+    const t = this.tally;
+    const hours = ((Date.now() - new Date(t.since).getTime()) / 3_600_000).toFixed(1);
+    const health = t.failures === 0 ? "healthy" : `${t.failures} RPC failure(s)`;
+    const lines = [
+      `${this.network} listener is alive. Nothing here needs action unless a number looks wrong.`,
+      "",
+      `period          : ${t.since} .. ${new Date().toISOString()} (${hours} h)`,
+      `position        : block ${this.state.data.lastBlock}`,
+      `events seen     : ${this.state.data.eventsSeen}`,
+      `alerts sent     : ${this.state.data.alertsSent}`,
+      `rpc failures    : ${t.failures}`,
+      `endpoint changes: ${t.switches}   (routing between call types — not a fault)`,
+      `active endpoint : ${this.pool.current || "unknown"}`,
+      `poll interval   : ${this.pollMs / 1000} s · confirmations ${this.confirmations}`,
+      "",
+      `Endpoint status:\n${JSON.stringify(this.pool.stats(), null, 2)}`,
+    ];
+    this.lastSummaryMail = Date.now();
+    this.tally = { switches: 0, failures: 0, since: new Date().toISOString() };
+    await this.mailer.send({
+      subject: `[${this.network}] daily summary — ${health}, block ${this.state.data.lastBlock}`,
+      text: lines.join("\n"),
+    }).catch(() => {});
   }
 
   async cycle() {

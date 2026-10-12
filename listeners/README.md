@@ -32,12 +32,44 @@ For a network called `<net>`, the prefix is its name upper-cased with non-alphan
 | `<NET>_START_BLOCK` | where to begin with no saved position |
 | `<NET>_WATCH_INCOMING` · `<NET>_WATCH_FAILED` | `false` to switch off either extra scan |
 | `<NET>_MAIL_TO` | per-network recipient, overriding the global `MAIL_TO` |
+| `<NET>_ANOMALY_MAIL_MS` | how often a **failure** digest may go out (default 30 min) |
+| `<NET>_SUMMARY_MS` | one heartbeat per period, `0` for none (default 24 h) |
+| `<NET>_MAIL_ON_SWITCH` | `true` to also mail the moment the active endpoint changes (default `false`) |
 
 Mail is global: `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`, `MAIL_FROM`, `MAIL_TO`.
 
 The older names already in use (`WATCH_GEMBA`, `WATCH_SEPOLIA`, `GEMBA_RPC_URLS`, …) still
 resolve, so an existing `.env` keeps running after an upgrade instead of silently watching
 nothing. `node listeners/run.js` with no argument lists what is configured.
+
+## When a mail goes out — and when it deliberately does not
+
+🔴 **A switch of the active endpoint is not an alert.** Each call is routed to an endpoint that
+can serve it: `scanIncoming` needs `logsWithoutAddress` and only some providers allow an
+unfiltered `eth_getLogs`, while `getBlockNumber` takes the first free one. The active endpoint
+therefore changes **between call classes every single cycle** — normal routing, not a fault.
+
+That was learned the hard way. The pool kept one global "current endpoint", so the two call
+classes overwrote each other twice per cycle and each overwrite was reported as an anomaly:
+**48 mails in one day on sepolia**, every one of them reading `0 RPC failure(s), 40 switch(es)`
+— noise that buries the one message that matters. Two fixes, both covered by
+`listeners/test/alerting.test.js`:
+
+1. The pool tracks the active endpoint **per capability bucket**, so a switch means a change
+   *within* one call class. Alternating between classes emits nothing.
+2. The digest goes out **only when an endpoint actually failed**. Switch counts ride along inside
+   that digest and in the daily heartbeat; `<NET>_MAIL_ON_SWITCH=true` restores live reporting
+   for anyone who wants it.
+
+| what happens | what arrives |
+|---|---|
+| a wallet event, an arriving token, a **refused** transaction | immediately, one mail per batch |
+| an endpoint **fails** | failure digest, at most once per `ANOMALY_MAIL_MS` |
+| the active endpoint merely changes | nothing — counted only |
+| **every** endpoint fails every round | its own louder mail, not rate-limited |
+| five cycles in a row fail | "listener cannot read the chain" |
+| the listener shuts down | "listener STOPPED" |
+| nothing at all is wrong | one heartbeat per `SUMMARY_MS` with the counters |
 
 ## Three things each cycle looks for
 

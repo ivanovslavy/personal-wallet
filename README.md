@@ -245,8 +245,14 @@ Arbitrum from nothing but env vars.
 
 For a network `<net>`: `<NET>_WATCH`, `<NET>_CHAIN_ID`, `<NET>_RPC_URLS`, `<NET>_EXPLORER`,
 `<NET>_POLL_MS`, `<NET>_CONFIRMATIONS`, `<NET>_MAX_SPAN`, `<NET>_START_BLOCK`,
-`<NET>_WATCH_INCOMING`, `<NET>_WATCH_FAILED`, `<NET>_MAIL_TO`. Defaults ship for Ethereum (12
+`<NET>_WATCH_INCOMING`, `<NET>_WATCH_FAILED`, `<NET>_MAIL_TO`, `<NET>_ANOMALY_MAIL_MS`,
+`<NET>_SUMMARY_MS`, `<NET>_MAIL_ON_SWITCH`. Defaults ship for Ethereum (12
 confirmations), BSC (15), Polygon (30 — it reorgs routinely), GembaChain mainnet and testnet.
+
+**Alert cadence is env-driven too.** Mail goes out on a real event or a real failure; a change of
+the active endpoint is routing, not a fault, and is counted rather than mailed. One heartbeat per
+`<NET>_SUMMARY_MS` proves the listener is alive. See `listeners/README.md` for the full table and
+the incident that produced the rule — 48 mails in a day saying nothing was wrong.
 
 ### Three things each cycle looks for
 
