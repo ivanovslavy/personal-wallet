@@ -14,7 +14,7 @@
 const path = require("path");
 require("dotenv").config({ path: path.join(__dirname, "..", ".env") });
 const { ethers } = require("ethers");
-const { NETWORKS } = require("./config");
+const { networkConfig, knownNetworks } = require("./config");
 const { redact } = require("./lib/rpc");
 
 const TIMEOUT_MS = 12_000;
@@ -62,7 +62,9 @@ async function probe(cfg, e) {
 
 (async () => {
   const only = process.argv[2];
-  const names = only ? [only] : Object.keys(NETWORKS);
+  // Only probe networks that are actually configured — a default with no WATCH set is not in use.
+  const names = only ? [only] : knownNetworks().filter((n) => { try { networkConfig(n); return true; } catch { return false; } });
+  if (names.length === 0) { console.error("no network is configured — set <NET>_WATCH and <NET>_RPC_URLS in .env"); process.exit(2); }
   let anyUsable = false;
 
   // One failed attempt is not proof: all three gembascan endpoints were reported dead in a run,
@@ -77,9 +79,10 @@ async function probe(cfg, e) {
   };
 
   for (const name of names) {
-    const cfg = NETWORKS[name];
-    if (!cfg) { console.error(`unknown network: ${name}`); process.exit(2); }
-    const endpoints = cfg.endpoints();
+    let cfg;
+    try { cfg = networkConfig(name); }
+    catch (e) { console.error(`\n${name}: ${e.message}`); continue; }
+    const endpoints = cfg.endpoints;
     console.log(`\n${name}  (chainId ${cfg.chainId})  ${endpoints.length} endpoint(s) configured`);
     console.log("  " + "-".repeat(104));
     console.log(`  ${"endpoint".padEnd(36)} ${"keyed".padEnd(6)} ${"head".padEnd(10)} ${"ms".padEnd(6)} logs`);

@@ -13,6 +13,24 @@
  */
 const { ethers, network } = require("hardhat");
 
+/**
+ * The proposal id, taken from the Proposed event in the receipt.
+ *
+ * NOT from `proposalCount()` after the transaction: a public endpoint behind a load balancer
+ * answers from a block or two behind, returned the OLD count, and the script then tried to
+ * confirm an already-executed proposal. The receipt cannot be stale — it is the transaction's
+ * own log.
+ */
+function idFromReceipt(w, rc) {
+  for (const log of rc.logs) {
+    try {
+      const p = w.interface.parseLog({ topics: [...log.topics], data: log.data });
+      if (p && p.name === "Proposed") return p.args[0];
+    } catch { /* not ours */ }
+  }
+  throw new Error("no Proposed event in the receipt — cannot determine the proposal id");
+}
+
 const bool = (v, d) => (v == null ? d : String(v).toLowerCase() === "true");
 
 async function main() {
@@ -67,7 +85,7 @@ async function main() {
     console.log(`\npropose : an identical proposal already exists — resuming id ${id}`);
   } else {
     const rc1 = await (await w.proposeSetPolicy(newDelay, reqRec, reqTok)).wait();
-    id = await w.proposalCount();
+    id = idFromReceipt(w, rc1);
     console.log(`\npropose : id ${id}  tx ${rc1.hash}`);
   }
 

@@ -1,0 +1,75 @@
+{
+  "//": "DEFAULTS ONLY — every value here is overridable from .env, and a network that is not listed can be defined entirely from .env. This file is data, not logic: adding a chain means adding an entry (or just env variables), never editing code. See listeners/README.md for the variable names.",
+  "//confirmations": "How deep a log must be before it is reported. Chosen per chain from how reorg-prone it is: Polygon reorgs routinely, Ethereum rarely but expensively, a small PoS chain almost never.",
+  "networks": {
+    "gembatestnet": {
+      "chainId": 821207,
+      "explorer": "https://gembascan.io",
+      "pollMs": 20000,
+      "confirmations": 3,
+      "maxSpan": 2000,
+      "rpcs": [
+        "https://rpc1.gembascan.io",
+        "https://rpc2.gembascan.io",
+        "https://rpc3.gembascan.io"
+      ]
+    },
+    "gemba": {
+      "chainId": 821206,
+      "explorer": "https://gembascan.io",
+      "pollMs": 20000,
+      "confirmations": 5,
+      "maxSpan": 2000,
+      "rpcs": ["https://rpc.gembachain.io"]
+    },
+    "sepolia": {
+      "chainId": 11155111,
+      "explorer": "https://sepolia.etherscan.io",
+      "pollMs": 90000,
+      "confirmations": 4,
+      "maxSpan": 1000,
+      "rpcs": [
+        "https://ethereum-sepolia-rpc.publicnode.com",
+        "https://sepolia.drpc.org",
+        "https://sepolia.gateway.tenderly.co",
+        "https://eth-sepolia.api.onfinality.io/public"
+      ]
+    },
+    "mainnet": {
+      "chainId": 1,
+      "explorer": "https://etherscan.io",
+      "pollMs": 60000,
+      "confirmations": 12,
+      "maxSpan": 1000,
+      "rpcs": [
+        "https://ethereum-rpc.publicnode.com",
+        "https://eth.drpc.org",
+        "https://eth.llamarpc.com"
+      ]
+    },
+    "bsc": {
+      "chainId": 56,
+      "explorer": "https://bscscan.com",
+      "pollMs": 30000,
+      "confirmations": 15,
+      "maxSpan": 1000,
+      "rpcs": [
+        "https://bsc-rpc.publicnode.com",
+        "https://bsc-dataseed1.binance.org",
+        "https://bsc.drpc.org"
+      ]
+    },
+    "polygon": {
+      "chainId": 137,
+      "explorer": "https://polygonscan.com",
+      "pollMs": 30000,
+      "confirmations": 30,
+      "maxSpan": 1000,
+      "rpcs": [
+        "https://polygon-bor-rpc.publicnode.com",
+        "https://polygon-rpc.com",
+        "https://polygon.drpc.org"
+      ]
+    }
+  }
+}
