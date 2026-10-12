@@ -221,59 +221,94 @@ removed.
 
 ## The listeners
 
-Two systemd services watch the deployed wallets and email every event they see.
+Two systemd services watch the deployed wallets and email everything they see. Full detail in
+[`listeners/README.md`](listeners/README.md).
 
 | unit | watches | poll | confirmations |
 |---|---|---|---|
 | `personal-wallet-listener-gembatestnet` | 821207 | 20 s | 3 |
-| `personal-wallet-listener-sepolia` | 11155111 | 60 s | 4 |
+| `personal-wallet-listener-sepolia` | 11155111 | 90 s | 4 |
+| `personal-wallet-listener-watchdog.timer` | both, every 5 min | — | — |
 
 ```bash
-node listeners/probe.js            # which endpoints are usable right now
-node listeners/run.js sepolia      # run one in the foreground
+node listeners/probe.js              # which endpoints are usable right now
+node listeners/watchdog.js --dry-run # is each listener actually polling
+node listeners/run.js sepolia        # run one in the foreground
 ```
 
-Install on a Linux box (tested on a Raspberry Pi 5, Ubuntu 24.04, Node 20, 26 MB of dependencies):
+### Nothing is hardcoded
 
-```bash
-rsync -a --exclude node_modules --exclude artifacts --exclude cache \
-      ./ user@host:/home/user/personal_wallet/
-ssh user@host 'cd personal_wallet && npm install --omit=dev'
-ssh user@host 'sudo cp listeners/systemd/*.service /etc/systemd/system/ && sudo systemctl daemon-reload'
-ssh user@host 'sudo systemctl enable --now personal-wallet-listener-gembatestnet personal-wallet-listener-sepolia'
-```
+Every value comes from `.env`; `listeners/networks.default.json` supplies defaults **as data
+only**. A chain absent from that file can be defined purely from environment variables, so putting
+a wallet on a mainnet is env lines plus a systemd unit — never a code change. Verified by defining
+Arbitrum from nothing but env vars.
 
-The listeners need only `ethers`, `nodemailer` and `dotenv` — no Hardhat, no solc download. The
-ABI is a committed artefact (`listeners/abi/PersonalWallet.json`, regenerated with
-`npm run export:abi`), stamped with the bytecode hash it came from so a stale copy is detectable.
+For a network `<net>`: `<NET>_WATCH`, `<NET>_CHAIN_ID`, `<NET>_RPC_URLS`, `<NET>_EXPLORER`,
+`<NET>_POLL_MS`, `<NET>_CONFIRMATIONS`, `<NET>_MAX_SPAN`, `<NET>_START_BLOCK`,
+`<NET>_WATCH_INCOMING`, `<NET>_WATCH_FAILED`, `<NET>_MAIL_TO`. Defaults ship for Ethereum (12
+confirmations), BSC (15), Polygon (30 — it reorgs routinely), GembaChain mainnet and testnet.
+
+### Three things each cycle looks for
+
+1. **Events the wallet emits** — `eth_getLogs` filtered to the watched addresses.
+2. **Tokens arriving by a plain transfer.** An ERC-20 transfer runs none of the wallet's code, so
+   it emits no wallet event; without this the arrival is invisible. Scanned unfiltered by token, so
+   tokens nobody allowlisted are seen too, each tagged `allowlisted: true/false` and capped at
+   three unknown arrivals per email so dust cannot flood the alerting.
+3. **Transactions that REVERTED.** A failed transaction writes no logs, so a log-based listener can
+   never show a refused attempt — and "someone tried and was refused" is the most useful thing a
+   savings wallet can tell you. Blocks are read with their transactions, those addressed to the
+   wallet checked for `status 0`, and the call replayed at that block to **decode the reason**.
+   Verified live: `RecipientNotAllowed(0x3A9D…)`, `TokenNotAllowed(0x1111…)`, `BadTtl(60)`.
+
+Measured request cost: GembaChain at a 20 s poll is ~42 calls/min against its own nodes; Sepolia
+at 90 s is **8 calls/min** — fewer than the two-call version made at 60 s.
 
 ### Why it polls instead of subscribing
 
 A `provider.on("logs", …)` subscription dies quietly: the socket closes, nothing throws, and the
-service looks healthy while seeing nothing. Polling `eth_getLogs` over an explicit range either
-returns a range or raises — and the position is saved to disk per chunk, so a crash resumes
-instead of skipping. Logs are read to `head - confirmations`, never to the head, so a reorg cannot
-produce an alert for an event that later never happened.
+service looks healthy while seeing nothing. Polling `eth_getLogs` either returns a range or raises
+— and the position is saved per chunk, so a crash resumes instead of skipping. Logs are read to
+`head - confirmations`, never to the head, so a reorg cannot produce an alert for an event that
+later never happened.
 
-### RPC fallback
+### Staying alive, and knowing when it is not
 
-Endpoints are tried in order, **free before keyed**, so a quota-bearing endpoint is only reached
-when the free ones have failed. Classification is derived from the URL rather than trusted from
-configuration order. A failing endpoint is parked for an escalating cooldown instead of being
-hammered. `eth_getLogs` ranges are halved on refusal until accepted, because every provider caps
-the span differently and none of them advertise it.
+- **The endpoint list wraps round three complete times.** The first pass respects each endpoint's
+  cooldown; later passes ignore it, which is what makes the list genuinely return to the first
+  endpoint instead of stalling once everything is parked.
+- **Then it stops, rather than looping.** All three rounds failing means a 15-minute backoff and
+  one loud email, not a retry every 20 seconds — which fills the journal and invites rate-limiting
+  exactly when the listener needs to come back. The block position is kept throughout.
+- **systemd restarts a process that exits.** `Restart=always`.
+- **A watchdog restarts one that HANGS** — the case systemd cannot see, because to it a wedged
+  process is healthy. The test is "did it poll recently", against the `lastPollAt` each cycle
+  writes. Tested for real: a `SIGSTOP`ped listener still read `active` to systemd; the watchdog saw
+  a poll 350 s old against a 300 s threshold, restarted it, emailed, and the listener caught up
+  from block 4003395 to 4003584 with nothing lost.
 
-Any API key inside a URL is redacted in every log line and every email.
+Endpoint switching is normal, successful behaviour. It is reported — as a digest, at most every 30
+minutes — so a provider that is quietly degrading becomes visible, without a flapping endpoint
+turning the alerting into a flood.
 
-### The email
+### RPC fallback and the two distinctions that matter
 
-One message per poll cycle listing every event found — a 50-item batch transfer must not arrive as
-50 emails. Each event is reported with its contract, block, transaction hash, explorer link and
-decoded arguments. The listener verifies SMTP at startup and refuses to run without a working mail
-path, because a listener that cannot alert is worse than no listener: it looks fine. Sustained RPC
-failure raises its own alert once, and a recovery notice when it clears.
+Endpoints are tried **free before keyed**, classified from the URL rather than trusted from the
+order they were written in, so a quota-bearing endpoint is only reached when the free ones have
+failed. `eth_getLogs` ranges are halved on refusal, because every provider caps the span
+differently and none advertise it. Any API key inside a URL is redacted in every log line and
+every email.
 
----
+Two corrections the tests forced, both worth knowing if you build something similar:
+
+- **A contract revert is an answer, not an endpoint failure.** Rotating on it both slanders a
+  healthy endpoint and destroys the revert payload — which is why a decoded revert reason first
+  came back as `(could not decode)`.
+- **Capability is not health.** `publicnode` serves `eth_getLogs` with an address filter and
+  refuses it without one. Treating that as ill-health was wrong twice over: it pushed every other
+  call off a healthy endpoint, and it retried a call that can never work there. Capabilities are
+  now recorded per endpoint, and a transient error never counts towards one — after a capable
+  endpoint was written off for a blip.
 
 ## Testing and analysis
 
