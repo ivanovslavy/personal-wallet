@@ -688,8 +688,18 @@ contract PersonalWallet is ERC721Holder, ERC1155Holder, ReentrancyGuard {
         _requireAllowedRecipient(p.to);
         _requireAllowedToken(p.token);
         p.executed = true;
+        // SYMMETRY WITH depositERC20, added 2026-10-20 after invariant fuzzing found the gap.
+        // The entrance measures what ARRIVED and refuses a no-op. The exit used to trust the token
+        // and emit the INTENDED amount: a token that returns true without moving anything consumed
+        // the proposal and emitted ERC20Sent for value that never left, so every off-chain consumer
+        // of that event — the listeners, and the mail they send — was told a lie. A fee-on-transfer
+        // token needs no malice to produce the same overstatement. Measure what actually left,
+        // refuse a no-op, report the truth.
+        uint256 before = IERC20(p.token).balanceOf(address(this));
         IERC20(p.token).safeTransfer(p.to, p.value);
-        emit ERC20Sent(id, p.token, p.to, p.value);
+        uint256 sent = before - IERC20(p.token).balanceOf(address(this));
+        if (sent == 0) revert ZeroAmount();
+        emit ERC20Sent(id, p.token, p.to, sent);
         emit Executed(id, Kind.ERC20, msg.sender);
     }
 

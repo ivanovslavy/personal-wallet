@@ -1,28 +1,30 @@
 {
   "network": "gembatestnet",
   "chainId": 821207,
-  "deployedAt": "2026-10-12T05:51:49.969Z",
-  "localTime": "2026-10-12 08:51:49 +03:00",
+  "deployedAt": "2026-10-20T19:27:02.084Z",
+  "localTime": "2026-10-20 22:27:02 +03:00",
   "deployer": "0x2786e48814C2E562A92aE53187b848DBB312d1a4",
   "explorer": "https://gembascan.io",
   "contracts": [
     {
       "name": "PersonalWallet",
       "fullyQualifiedName": "contracts/PersonalWallet.sol:PersonalWallet",
-      "address": "0x3F6357a74Bec93F6281aA1FC705133eC71a1BaE2",
+      "address": "0x0b59725cb461a5F81352E239B4Ccf546e10712A9",
       "constructorArgs": [
         [
           "0x8eB8Bf106EbC9834a2586D04F73866C7436Ce298",
           "0x3A9Da2349caE432F46A04737d5F4c5EF9ef11973",
           "0xc45112B334822811f4418e2f13C2C80FF790C949"
         ],
-        false,
+        true,
         true,
         [
-          "0x2786e48814C2E562A92aE53187b848DBB312d1a4"
+          "0x2786e48814C2E562A92aE53187b848DBB312d1a4",
+          "0xaE33BCEc76FeB877921A9bf69C358Fc519BBEa58"
         ],
         [
-          "deployer / escape hatch"
+          "deployer / escape hatch",
+          "approved recipient 2026-10-14"
         ],
         [
           "0xF61647866ad7be8137230Ad688092D2f3F4A1666",
@@ -32,7 +34,8 @@
           "0xA3D8263b75302Bf875F1963aF53cAbce8d605bd0",
           "0x507C2C47B2cEEeB625471d4F5958BEcd55031b6d",
           "0x288B1FC1DEFd6e6F7E2e76B0Ee5Ecd6789248B60",
-          "0x9f2eC00072EBd2Ba8d1E31cF6f994FA62dcdC037"
+          "0x9f2eC00072EBd2Ba8d1E31cF6f994FA62dcdC037",
+          "0xD24a89dc1686C2F88d33A70250473495459C564a"
         ],
         [
           "USDT (faucet)",
@@ -42,12 +45,13 @@
           "MockUSDC",
           "MockEURC",
           "MockERC721",
-          "MockERC1155"
+          "MockERC1155",
+          "Kotkata by GembaPay (NFT gift)"
         ]
       ],
-      "txHash": "0x713ab7a00d4cfb641efe0c64bd45c8f81a87854afd52abfddbae289e89141568",
-      "block": 3987325,
-      "gasUsed": "5676691",
+      "txHash": "0x0cc18baa4404e3487a1fe6e39a435313317b38f25c100f2f3426814fb1a7eac4",
+      "block": 4309587,
+      "gasUsed": "5869083",
       "compiler": {
         "version": "0.8.28",
         "optimizer": {
@@ -57,10 +61,10 @@
         "evmVersion": "cancun",
         "viaIR": true
       },
-      "explorer": "https://gembascan.io/address/0x3F6357a74Bec93F6281aA1FC705133eC71a1BaE2",
+      "explorer": "https://gembascan.io/address/0x0b59725cb461a5F81352E239B4Ccf546e10712A9",
       "verified": {
         "result": "verified",
-        "at": "2026-10-12T05:59:21.923Z"
+        "at": "2026-10-20T19:28:06.728Z"
       }
     }
   ],

@@ -28,9 +28,12 @@ contract PersonalWalletInvariants is Test {
     function setUp() public {
         usdc = new MockUSDC();
 
-        address[] memory recips = new address[](1);
-        string[] memory recipLabels = new string[](1);
-        recips[0] = allowedTo; recipLabels[0] = "seed";
+        address[] memory recips = new address[](4);
+        string[] memory recipLabels = new string[](4);
+        recips[0] = allowedTo;       recipLabels[0] = "seed0";
+        recips[1] = address(0xA10);  recipLabels[1] = "seed1";
+        recips[2] = address(0xA11);  recipLabels[2] = "seed2";
+        recips[3] = address(0xA12);  recipLabels[3] = "seed3";
 
         address[] memory toks = new address[](1);
         string[] memory tokLabels = new string[](1);
@@ -44,31 +47,43 @@ contract PersonalWalletInvariants is Test {
 
         targetContract(address(h));
         // Only the handler drives the system; nothing calls the wallet directly.
-        bytes4[] memory sel = new bytes4[](22);
+        // WEIGHTING. Foundry picks selectors uniformly, so a selector listed twice is drawn twice as
+        // often. The first campaigns left the money paths starved — 1 NATIVE and 0 ERC20 executions
+        // across nine runs — because execution needs quorum AND the right kind AND an allowed
+        // destination, while veto/cancel killed proposals at the same rate as everything else.
+        bytes4[] memory sel = new bytes4[](32);
         sel[0]  = Handler.depositNative.selector;
         sel[1]  = Handler.depositToken.selector;
         sel[2]  = Handler.proposeNative.selector;
-        sel[3]  = Handler.proposeERC20.selector;
-        sel[4]  = Handler.proposeAllowRecipient.selector;
-        sel[5]  = Handler.proposeOwnerReplacement.selector;
-        sel[6]  = Handler.proposeSetPolicy.selector;
-        sel[7]  = Handler.confirm.selector;
-        sel[8]  = Handler.revokeConfirmation.selector;
-        sel[9]  = Handler.veto.selector;
-        sel[10] = Handler.cancel.selector;
-        sel[11] = Handler.acceptOwnerReplacement.selector;
-        sel[12] = Handler.executeNative.selector;
-        sel[13] = Handler.executeERC20.selector;
-        sel[14] = Handler.warp.selector;
-        // These three were MISSING from the first campaign, so their whole branch of the state
-        // machine — the timelocked, vetoable one — was never driven at all.
-        sel[15] = Handler.executeAllowRecipient.selector;
-        sel[16] = Handler.executeOwnerReplacement.selector;
-        sel[17] = Handler.executeSetPolicy.selector;
-        sel[18] = Handler.confirmAll.selector;
-        sel[19] = Handler.executeAnything.selector;
-        sel[20] = Handler.acceptAll.selector;
-        sel[21] = Handler.warpPastTimelock.selector;
+        sel[3]  = Handler.proposeNative.selector;
+        sel[4]  = Handler.proposeERC20.selector;
+        sel[5]  = Handler.proposeERC20.selector;
+        sel[6]  = Handler.proposeAllowRecipient.selector;
+        sel[7]  = Handler.proposeOwnerReplacement.selector;
+        sel[8]  = Handler.proposeSetPolicy.selector;
+        sel[9]  = Handler.confirm.selector;
+        sel[10] = Handler.confirmAll.selector;
+        sel[11] = Handler.confirmAll.selector;
+        sel[12] = Handler.confirmAll.selector;
+        sel[13] = Handler.revokeConfirmation.selector;
+        sel[14] = Handler.veto.selector;
+        sel[15] = Handler.cancel.selector;
+        sel[16] = Handler.acceptOwnerReplacement.selector;
+        sel[17] = Handler.acceptAll.selector;
+        sel[18] = Handler.executeNative.selector;
+        sel[19] = Handler.executeERC20.selector;
+        sel[20] = Handler.executeAllowRecipient.selector;
+        sel[21] = Handler.executeOwnerReplacement.selector;
+        sel[22] = Handler.executeSetPolicy.selector;
+        sel[23] = Handler.executeAnything.selector;
+        sel[24] = Handler.executeAnything.selector;
+        sel[25] = Handler.executeAnything.selector;
+        sel[26] = Handler.executeAnything.selector;
+        sel[27] = Handler.warp.selector;
+        sel[28] = Handler.warp.selector;
+        sel[29] = Handler.warpPastTimelock.selector;
+        sel[30] = Handler.depositNative.selector;
+        sel[31] = Handler.depositToken.selector;
         targetSelector(FuzzSelector({addr: address(h), selectors: sel}));
     }
 
@@ -140,5 +155,11 @@ contract PersonalWalletInvariants is Test {
         console2.log("saw executable      :", h.sawExecutable());
         console2.log("max confirmations   :", h.maxConfirms());
         console2.log("ids tracked         :", h.idCount());
+        console2.log("-- izpalnenia po vid --");
+        console2.log("  NATIVE        :", h.execNative());
+        console2.log("  ERC20         :", h.execERC20());
+        console2.log("  ALLOW_RECIP   :", h.execAllowRecip());
+        console2.log("  OWNER_REPLACE :", h.execOwnerRepl());
+        console2.log("  SET_POLICY    :", h.execSetPolicy());
     }
 }

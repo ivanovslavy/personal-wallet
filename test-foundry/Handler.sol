@@ -25,6 +25,7 @@ contract Handler is Test {
     address[3] public owners;
     address public outsider = address(0xBEEF);
     address public allowedTo;
+    address[4] public allowedSet;   // seeded recipients — money has somewhere legal to go
 
     // ---- ghosts: what the contract ALLOWED, recorded at the moment it allowed it -----------------
     uint256 public executions;              // successful executes of any kind
@@ -40,6 +41,8 @@ contract Handler is Test {
 
     uint256 public calls;
     uint256 public proposalsMade;
+    uint256 public execNative; uint256 public execERC20; uint256 public execAllowRecip;
+    uint256 public execOwnerRepl; uint256 public execSetPolicy;
     uint256 public sawExecutable;   // диагностика: колко пъти изобщо е имало готово предложение
     uint256 public maxConfirms;     // диагностика: най-много подписи, събирани някога
 
@@ -52,6 +55,7 @@ contract Handler is Test {
 
     constructor(PersonalWallet _w, MockUSDC _usdc, address[3] memory _owners, address _allowedTo) {
         w = _w; usdc = _usdc; owners = _owners; allowedTo = _allowedTo;
+        allowedSet = [_allowedTo, address(0xA10), address(0xA11), address(0xA12)];
     }
 
     function _owner(uint256 seed) internal view returns (address) { return owners[seed % 3]; }
@@ -99,7 +103,11 @@ contract Handler is Test {
     function proposeNative(uint256 who, uint256 amt, uint64 ttl, bool toAllowed, uint256 rnd) public {
         amt = bound(amt, 1, 5 ether);
         ttl = uint64(bound(ttl, 20 days, 30 days));
-        address to = toAllowed ? allowedTo : address(uint160(bound(rnd, 1, type(uint160).max)));
+        // 3-of-4 go to an allow-listed address. WHY: under strict recipients a proposal to a random
+        // address can NEVER execute, so aiming randomly meant the money paths executed once in nine
+        // runs and `strictModeNeverPaysAnOutsider` passed on an empty set. The remaining 1-of-4 still
+        // aims at an outsider — that is what keeps the strict guard itself under test.
+        address to = toAllowed ? allowedSet[rnd % 4] : address(uint160(bound(rnd, 1, type(uint160).max)));
         vm.prank(_owner(who));
         try w.proposeNative(to, amt, ttl) returns (uint256 i) { proposalsMade++; ids.push(i); } catch {}
         calls++;
@@ -108,7 +116,7 @@ contract Handler is Test {
     function proposeERC20(uint256 who, uint256 amt, uint64 ttl, bool toAllowed, uint256 rnd) public {
         amt = bound(amt, 1, 100_000e6);
         ttl = uint64(bound(ttl, 20 days, 30 days));
-        address to = toAllowed ? allowedTo : address(uint160(bound(rnd, 1, type(uint160).max)));
+        address to = toAllowed ? allowedSet[rnd % 4] : address(uint160(bound(rnd, 1, type(uint160).max)));
         vm.prank(_owner(who));
         try w.proposeERC20(address(usdc), to, amt, ttl) returns (uint256 i) { proposalsMade++; ids.push(i); } catch {}
         calls++;
@@ -280,15 +288,15 @@ contract Handler is Test {
             // Try EVERY door for this id. Picking one kind per sweep meant four out of five
             // attempts hit WrongKind and the executable proposals went unexecuted.
             vm.prank(caller);
-            try w.executeNative(id) { _audit(id,e,c,x,t,u); nativeOut += p.value; if (!allowedDest) toNonAllowlisted++; } catch {}
+            try w.executeNative(id) { _audit(id,e,c,x,t,u); execNative++; nativeOut += p.value; if (!allowedDest) toNonAllowlisted++; } catch {}
             vm.prank(caller);
-            try w.executeERC20(id) { _audit(id,e,c,x,t,u); if (!allowedDest) toNonAllowlisted++; } catch {}
+            try w.executeERC20(id) { _audit(id,e,c,x,t,u); execERC20++; if (!allowedDest) toNonAllowlisted++; } catch {}
             vm.prank(caller);
-            try w.executeAllowRecipient(id) { _audit(id,e,c,x,t,u); } catch {}
+            try w.executeAllowRecipient(id) { _audit(id,e,c,x,t,u); execAllowRecip++; } catch {}
             vm.prank(caller);
-            try w.executeSetPolicy(id) { _audit(id,e,c,x,t,u); } catch {}
+            try w.executeSetPolicy(id) { _audit(id,e,c,x,t,u); execSetPolicy++; } catch {}
             vm.prank(caller);
-            try w.executeOwnerReplacement(id) { _audit(id,e,c,x,t,u); owners = w.owners(); } catch {}
+            try w.executeOwnerReplacement(id) { _audit(id,e,c,x,t,u); execOwnerRepl++; owners = w.owners(); } catch {}
         }
         calls++;
     }

@@ -122,3 +122,66 @@ It does not say the contract is correct. A fuzzer explores; it does not prove. E
 ~3 per 250-call run — real coverage, not enormous. The honest statement is **"no counterexample
 found in 4.5 million calls"**, which is worth more than 148 hand-written scenarios and less than a
 proof. Symbolic checking (Halmos) over the same properties is the next step up.
+
+
+## FINDING 1 — the exit was not symmetric with the entrance. Found, fixed, redeployed.
+
+Found by the evil-token campaign on 2026-10-20, shrunk by the fuzzer to three calls.
+
+### What it was
+
+```
+depositERC20   measured balanceBefore/After, computed `received`, reverted on zero,
+               and emitted WHAT ARRIVED
+executeERC20   called safeTransfer and emitted p.value — the INTENDED amount —
+               without ever checking that anything moved
+```
+
+The counterexample: propose 33 485 of a token the wallet holds **zero** of, confirm, execute. The
+token returned `true` and moved nothing. The wallet marked the proposal **executed** and emitted
+`ERC20Sent(33 485)`.
+
+### Why it mattered beyond a hostile token
+
+A fee-on-transfer token needs no malice to produce the same overstatement, and **USDT has exactly
+that parameter**. It is allowlisted on both live wallets. The event would claim the full amount
+while the recipient received less.
+
+This project's entire alerting story is built on those events: the listeners read them and mail
+`alerts@gembamail.com`. A lying event is not cosmetic here — it is the thing you would be reading.
+
+🔑 **`executeNative` was already correct** — it checks `address(this).balance` and reverts if the
+send fails. The gap existed only where the contract trusted a token to tell the truth. That is what
+made it a real finding rather than a theoretical one: the same file contained both the right
+pattern and the wrong one.
+
+### The fix
+
+```solidity
+uint256 before = IERC20(p.token).balanceOf(address(this));
+IERC20(p.token).safeTransfer(p.to, p.value);
+uint256 sent = before - IERC20(p.token).balanceOf(address(this));
+if (sent == 0) revert ZeroAmount();
+emit ERC20Sent(id, p.token, p.to, sent);
+```
+
+Measure what actually left, refuse a no-op, report the truth. Runtime size went from 21 801 B to
+**22 030 B** — 2 546 B still free under EIP-170.
+
+Pinned by `Finding1_ExitIsNowSymmetric` in `test-foundry/HappyPath.t.sol`: the lying token can no
+longer consume a proposal, and the native path is tested alongside it to show the gap was specific,
+not systemic.
+
+## 🔴 The second thing the campaign caught was MY test, not the contract
+
+`invariant_registriesStayCoherent` asserted `allowedRecipients().length == registeredRecipientCount()`
+and failed in the deep run: revoke the only recipient and the list is 0 while the count is 1.
+
+That is not a defect. The contract's own NatSpec says `allowedRecipients()` is "every destination
+**currently allowed**" and `registeredRecipientCount()` is "everything **ever registered**, allowed
+or since revoked". Two different sets, on purpose — the registry keeps the label and the history of
+something that was revoked.
+
+The invariant was rewritten to assert containment (`allowed <= ever registered`) plus agreement with
+`isAllowed` for every listed entry. **Recorded because a failing test is not evidence of a bug until
+you have read the code it accuses.**

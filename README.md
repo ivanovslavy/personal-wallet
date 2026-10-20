@@ -24,12 +24,27 @@ deployed/       one JSON record per deployment: address, constructor args, compi
 
 | chain | chainId | PersonalWallet | verified |
 |---|---|---|---|
-| GembaChain testnet | 821207 | [`0x3F6357a74Bec93F6281aA1FC705133eC71a1BaE2`](https://gembascan.io/address/0x3F6357a74Bec93F6281aA1FC705133eC71a1BaE2#code) | yes |
-| Sepolia | 11155111 | [`0x628b6A266fFb4acED394D3eb7879B880B7eccF56`](https://sepolia.etherscan.io/address/0x628b6A266fFb4acED394D3eb7879B880B7eccF56#code) | yes |
+| GembaChain testnet | 821207 | [`0x0b59725cb461a5F81352E239B4Ccf546e10712A9`](https://gembascan.io/address/0x0b59725cb461a5F81352E239B4Ccf546e10712A9#code) | yes |
+| Sepolia | 11155111 | [`0x3eC142069f86B874a05448F4EB9Af9db4F7D1811`](https://sepolia.etherscan.io/address/0x3eC142069f86B874a05448F4EB9Af9db4F7D1811#code) | yes |
 
-Both are configured the same way: three owners, threshold two, the **token allowlist enforced**,
-the recipient allowlist available but switched off, and a 72-hour timelock on anything that widens
-the wallet's reach.
+Both are configured the same way: three owners, threshold two, **both allowlists enforced** — the
+token registry and the recipient registry — and a 72-hour timelock on anything that widens the
+wallet's reach.
+
+### Previous deployment, being retired
+
+Deployed 2026-10-12 and replaced on 2026-10-20 by the two addresses above, which carry the
+`executeERC20` fix described in [`docs/INVARIANTS.md`](docs/INVARIANTS.md). The old wallets still
+hold assets, so both are still watched by the listeners until the migration completes.
+
+| chain | retired PersonalWallet |
+|---|---|
+| GembaChain testnet | [`0x3F6357a74Bec93F6281aA1FC705133eC71a1BaE2`](https://gembascan.io/address/0x3F6357a74Bec93F6281aA1FC705133eC71a1BaE2#code) |
+| Sepolia | [`0x628b6A266fFb4acED394D3eb7879B880B7eccF56`](https://sepolia.etherscan.io/address/0x628b6A266fFb4acED394D3eb7879B880B7eccF56#code) |
+
+Each retired wallet has its replacement allowlisted as a recipient (3-of-3, matured after the
+72-hour timelock), so the assets move directly from the old contract into the new one — through the
+same guarded path as any other transfer, with no privileged escape route.
 
 Full records — constructor arguments, compiler settings, transaction hashes — are in `deployed/`.
 
