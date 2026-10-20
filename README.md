@@ -24,27 +24,33 @@ deployed/       one JSON record per deployment: address, constructor args, compi
 
 | chain | chainId | PersonalWallet | verified |
 |---|---|---|---|
-| GembaChain testnet | 821207 | [`0x0b59725cb461a5F81352E239B4Ccf546e10712A9`](https://gembascan.io/address/0x0b59725cb461a5F81352E239B4Ccf546e10712A9#code) | yes |
-| Sepolia | 11155111 | [`0x3eC142069f86B874a05448F4EB9Af9db4F7D1811`](https://sepolia.etherscan.io/address/0x3eC142069f86B874a05448F4EB9Af9db4F7D1811#code) | yes |
+| GembaChain testnet | 821207 | [`0x586CfE0D34D812F53FbefD78F9Ad0243f79A685D`](https://gembascan.io/address/0x586CfE0D34D812F53FbefD78F9Ad0243f79A685D#code) | yes |
+| Sepolia | 11155111 | [`0x992877042cB4f33222218f503361D4d957a749f5`](https://sepolia.etherscan.io/address/0x992877042cB4f33222218f503361D4d957a749f5#code) | yes |
 
 Both are configured the same way: three owners, threshold two, **both allowlists enforced** — the
 token registry and the recipient registry — and a 72-hour timelock on anything that widens the
 wallet's reach.
 
-### Previous deployment, being retired
+### Earlier deployments, being retired
 
-Deployed 2026-10-12 and replaced on 2026-10-20 by the two addresses above, which carry the
-`executeERC20` fix described in [`docs/INVARIANTS.md`](docs/INVARIANTS.md). The old wallets still
-hold assets, so both are still watched by the listeners until the migration completes.
+Two generations are on their way out. Each has the current wallet allowlisted as a recipient —
+3-of-3, maturing **2026-10-23** — so the assets move across through the same guarded path as any
+other transfer, with no privileged escape route. Until the sweep completes the listeners watch
+**all three addresses per chain**, because an unwatched contract holding value is exactly the gap
+this project exists to avoid.
 
-| chain | retired PersonalWallet |
-|---|---|
-| GembaChain testnet | [`0x3F6357a74Bec93F6281aA1FC705133eC71a1BaE2`](https://gembascan.io/address/0x3F6357a74Bec93F6281aA1FC705133eC71a1BaE2#code) |
-| Sepolia | [`0x628b6A266fFb4acED394D3eb7879B880B7eccF56`](https://sepolia.etherscan.io/address/0x628b6A266fFb4acED394D3eb7879B880B7eccF56#code) |
+| deployed | chain | address | what it lacks |
+|---|---|---|---|
+| 2026-10-12 | gemba | [`0x3F6357a7…1BaE2`](https://gembascan.io/address/0x3F6357a74Bec93F6281aA1FC705133eC71a1BaE2#code) | both exit fixes |
+| 2026-10-12 | sepolia | [`0x628b6A26…ccF56`](https://sepolia.etherscan.io/address/0x628b6A266fFb4acED394D3eb7879B880B7eccF56#code) | both exit fixes |
+| 2026-10-20 am | gemba | [`0x0b59725c…12A9`](https://gembascan.io/address/0x0b59725cb461a5F81352E239B4Ccf546e10712A9#code) | the NFT exit checks |
+| 2026-10-20 am | sepolia | [`0x3eC14206…1811`](https://sepolia.etherscan.io/address/0x3eC142069f86B874a05448F4EB9Af9db4F7D1811#code) | the NFT exit checks |
 
-Each retired wallet has its replacement allowlisted as a recipient (3-of-3, matured after the
-72-hour timelock), so the assets move directly from the old contract into the new one — through the
-same guarded path as any other transfer, with no privileged escape route.
+Why two generations in one day: invariant fuzzing found the ERC-20 exit never checked that the
+asset had actually moved, which was fixed and deployed in the morning. The same campaign, extended
+to the NFT paths that afternoon, found the identical gap in `executeERC721`, `executeERC1155` and
+every item inside `executeNFTBatch`. Rather than leave a known gap live, both were closed and
+redeployed. See [`docs/INVARIANTS.md`](docs/INVARIANTS.md).
 
 Full records — constructor arguments, compiler settings, transaction hashes — are in `deployed/`.
 

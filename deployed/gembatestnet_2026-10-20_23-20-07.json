@@ -1,0 +1,73 @@
+{
+  "network": "gembatestnet",
+  "chainId": 821207,
+  "deployedAt": "2026-10-20T20:20:07.089Z",
+  "localTime": "2026-10-20 23:20:07 +03:00",
+  "deployer": "0x2786e48814C2E562A92aE53187b848DBB312d1a4",
+  "explorer": "https://gembascan.io",
+  "contracts": [
+    {
+      "name": "PersonalWallet",
+      "fullyQualifiedName": "contracts/PersonalWallet.sol:PersonalWallet",
+      "address": "0x586CfE0D34D812F53FbefD78F9Ad0243f79A685D",
+      "constructorArgs": [
+        [
+          "0x8eB8Bf106EbC9834a2586D04F73866C7436Ce298",
+          "0x3A9Da2349caE432F46A04737d5F4c5EF9ef11973",
+          "0xc45112B334822811f4418e2f13C2C80FF790C949"
+        ],
+        true,
+        true,
+        [
+          "0x2786e48814C2E562A92aE53187b848DBB312d1a4",
+          "0xaE33BCEc76FeB877921A9bf69C358Fc519BBEa58"
+        ],
+        [
+          "deployer / escape hatch",
+          "approved recipient 2026-10-14"
+        ],
+        [
+          "0xF61647866ad7be8137230Ad688092D2f3F4A1666",
+          "0xc9af98AD8ae78086620821F9Ceb05842Dd7950CF",
+          "0x7Ff43282d7939418a3f0A308E2d48Dd93536044e",
+          "0x21c1b5a01431dEc11e4A318Cab6c1B08760af85B",
+          "0xA3D8263b75302Bf875F1963aF53cAbce8d605bd0",
+          "0x507C2C47B2cEEeB625471d4F5958BEcd55031b6d",
+          "0x288B1FC1DEFd6e6F7E2e76B0Ee5Ecd6789248B60",
+          "0x9f2eC00072EBd2Ba8d1E31cF6f994FA62dcdC037",
+          "0xD24a89dc1686C2F88d33A70250473495459C564a"
+        ],
+        [
+          "USDT (faucet)",
+          "USDC (faucet)",
+          "EURC (faucet)",
+          "MockUSDT",
+          "MockUSDC",
+          "MockEURC",
+          "MockERC721",
+          "MockERC1155",
+          "Kotkata by GembaPay (NFT gift)"
+        ]
+      ],
+      "txHash": "0x68444f43c5e769ba01a910aa524d86e809ae52ddc6a4bde3ae4fb4dd6fdce329",
+      "block": 4310993,
+      "gasUsed": "6017507",
+      "compiler": {
+        "version": "0.8.28",
+        "optimizer": {
+          "enabled": true,
+          "runs": 200
+        },
+        "evmVersion": "cancun",
+        "viaIR": true
+      },
+      "explorer": "https://gembascan.io/address/0x586CfE0D34D812F53FbefD78F9Ad0243f79A685D",
+      "verified": null
+    }
+  ],
+  "owners": [
+    "0x8eB8Bf106EbC9834a2586D04F73866C7436Ce298",
+    "0x3A9Da2349caE432F46A04737d5F4c5EF9ef11973",
+    "0xc45112B334822811f4418e2f13C2C80FF790C949"
+  ]
+}

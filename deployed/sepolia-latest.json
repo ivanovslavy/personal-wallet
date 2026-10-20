@@ -1,15 +1,15 @@
 {
   "network": "sepolia",
   "chainId": 11155111,
-  "deployedAt": "2026-10-20T19:27:26.657Z",
-  "localTime": "2026-10-20 22:27:26 +03:00",
+  "deployedAt": "2026-10-20T20:20:17.287Z",
+  "localTime": "2026-10-20 23:20:17 +03:00",
   "deployer": "0x2786e48814C2E562A92aE53187b848DBB312d1a4",
   "explorer": "https://sepolia.etherscan.io",
   "contracts": [
     {
       "name": "PersonalWallet",
       "fullyQualifiedName": "contracts/PersonalWallet.sol:PersonalWallet",
-      "address": "0x3eC142069f86B874a05448F4EB9Af9db4F7D1811",
+      "address": "0x992877042cB4f33222218f503361D4d957a749f5",
       "constructorArgs": [
         [
           "0x8eB8Bf106EbC9834a2586D04F73866C7436Ce298",
@@ -39,9 +39,9 @@
           "Kotkata (NFT gift)"
         ]
       ],
-      "txHash": "0x5ee3a44d2630a7c60ee71b090a766b9876a2b99fe1754545d27e3122dd38f483",
-      "block": 11957373,
-      "gasUsed": "37436538",
+      "txHash": "0xdfff1adc4c462b9eb809d399015ab65d2e461afcbf34fdbec5406df26c99e20f",
+      "block": 11957632,
+      "gasUsed": "38497465",
       "compiler": {
         "version": "0.8.28",
         "optimizer": {
@@ -51,10 +51,10 @@
         "evmVersion": "cancun",
         "viaIR": true
       },
-      "explorer": "https://sepolia.etherscan.io/address/0x3eC142069f86B874a05448F4EB9Af9db4F7D1811",
+      "explorer": "https://sepolia.etherscan.io/address/0x992877042cB4f33222218f503361D4d957a749f5",
       "verified": {
         "result": "verified",
-        "at": "2026-10-20T19:30:50.275Z"
+        "at": "2026-10-20T20:21:32.282Z"
       }
     }
   ],

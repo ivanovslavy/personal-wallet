@@ -257,3 +257,24 @@ property. Added `check_confirmationsNeverExceedOwnerCount` and
 
 **Still open, deliberately:** an independent human audit (nothing here was reviewed by anyone who
 did not write it) and a cap on registry growth. Both are listed, neither is done.
+
+
+## Deployment, 2026-10-20 evening — the NFT fixes are live
+
+| chain | address | runtime |
+|---|---|---|
+| gembatestnet | `0x586CfE0D34D812F53FbefD78F9Ad0243f79A685D` | 22 716 B |
+| sepolia | `0x992877042cB4f33222218f503361D4d957a749f5` | 22 716 B |
+
+Both verified, funded to match the previous generation, strict on both registries.
+
+**Two older generations hold assets** and each has the new wallet allowlisted as a recipient,
+3-of-3, maturing **2026-10-23 ~20:26 UTC**:
+
+| generation | gemba | sepolia |
+|---|---|---|
+| 2026-10-12 | `0x3F6357a7…` proposal 6 | `0x628b6A26…` proposal 5 |
+| 2026-10-20 am | `0x0b59725c…` proposal 1 | `0x3eC14206…` proposal 1 |
+
+Until the sweep completes the listeners watch **three addresses per chain**. Drop the older two
+from `<NET>_WATCH` once they are empty.

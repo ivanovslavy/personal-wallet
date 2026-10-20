@@ -1,15 +1,15 @@
 {
   "network": "gembatestnet",
   "chainId": 821207,
-  "deployedAt": "2026-10-20T19:27:02.084Z",
-  "localTime": "2026-10-20 22:27:02 +03:00",
+  "deployedAt": "2026-10-20T20:20:07.089Z",
+  "localTime": "2026-10-20 23:20:07 +03:00",
   "deployer": "0x2786e48814C2E562A92aE53187b848DBB312d1a4",
   "explorer": "https://gembascan.io",
   "contracts": [
     {
       "name": "PersonalWallet",
       "fullyQualifiedName": "contracts/PersonalWallet.sol:PersonalWallet",
-      "address": "0x0b59725cb461a5F81352E239B4Ccf546e10712A9",
+      "address": "0x586CfE0D34D812F53FbefD78F9Ad0243f79A685D",
       "constructorArgs": [
         [
           "0x8eB8Bf106EbC9834a2586D04F73866C7436Ce298",
@@ -49,9 +49,9 @@
           "Kotkata by GembaPay (NFT gift)"
         ]
       ],
-      "txHash": "0x0cc18baa4404e3487a1fe6e39a435313317b38f25c100f2f3426814fb1a7eac4",
-      "block": 4309587,
-      "gasUsed": "5869083",
+      "txHash": "0x68444f43c5e769ba01a910aa524d86e809ae52ddc6a4bde3ae4fb4dd6fdce329",
+      "block": 4310993,
+      "gasUsed": "6017507",
       "compiler": {
         "version": "0.8.28",
         "optimizer": {
@@ -61,10 +61,10 @@
         "evmVersion": "cancun",
         "viaIR": true
       },
-      "explorer": "https://gembascan.io/address/0x0b59725cb461a5F81352E239B4Ccf546e10712A9",
+      "explorer": "https://gembascan.io/address/0x586CfE0D34D812F53FbefD78F9Ad0243f79A685D",
       "verified": {
         "result": "verified",
-        "at": "2026-10-20T19:28:06.728Z"
+        "at": "2026-10-20T20:20:55.795Z"
       }
     }
   ],
