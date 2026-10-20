@@ -220,6 +220,11 @@ contract PersonalWallet is ERC721Holder, ERC1155Holder, ReentrancyGuard {
     error NotOwner(address caller);
     error ZeroAddress();
     error ZeroAmount();
+    /// @notice The asset did not actually leave the wallet, so the transfer was a no-op or a lie.
+    /// @dev Raised when the measured before/after state shows nothing moved. A token or NFT contract
+    ///  that reports success without transferring would otherwise consume the proposal and emit a
+    ///  Sent event for value that never left — found by invariant fuzzing 2026-10-20.
+    error NothingMoved(address asset);
     error DuplicateOwner(address owner);
     error SelfRecipient();
     error BadTtl(uint64 ttl);
@@ -698,7 +703,7 @@ contract PersonalWallet is ERC721Holder, ERC1155Holder, ReentrancyGuard {
         uint256 before = IERC20(p.token).balanceOf(address(this));
         IERC20(p.token).safeTransfer(p.to, p.value);
         uint256 sent = before - IERC20(p.token).balanceOf(address(this));
-        if (sent == 0) revert ZeroAmount();
+        if (sent == 0) revert NothingMoved(p.token);
         emit ERC20Sent(id, p.token, p.to, sent);
         emit Executed(id, Kind.ERC20, msg.sender);
     }
@@ -709,7 +714,11 @@ contract PersonalWallet is ERC721Holder, ERC1155Holder, ReentrancyGuard {
         _requireAllowedRecipient(p.to);
         _requireAllowedToken(p.token);
         p.executed = true;
+        // Same asymmetry the ERC-20 path had: safeTransferFrom on a CONFORMING token reverts when
+        // the vault does not own the id, but a token that lies would consume the proposal and emit
+        // ERC721Sent for an NFT that never moved. Verify the seat actually changed hands.
         IERC721(p.token).safeTransferFrom(address(this), p.to, p.value);
+        if (IERC721(p.token).ownerOf(p.value) == address(this)) revert NothingMoved(p.token);
         emit ERC721Sent(id, p.token, p.to, p.value);
         emit Executed(id, Kind.ERC721, msg.sender);
     }
@@ -720,7 +729,9 @@ contract PersonalWallet is ERC721Holder, ERC1155Holder, ReentrancyGuard {
         _requireAllowedRecipient(p.to);
         _requireAllowedToken(p.token);
         p.executed = true;
+        uint256 had = IERC1155(p.token).balanceOf(address(this), p.value);
         IERC1155(p.token).safeTransferFrom(address(this), p.to, p.value, p.amount, "");
+        if (IERC1155(p.token).balanceOf(address(this), p.value) >= had) revert NothingMoved(p.token);
         emit ERC1155Sent(id, p.token, p.to, p.value, p.amount);
         emit Executed(id, Kind.ERC1155, msg.sender);
     }
@@ -743,9 +754,14 @@ contract PersonalWallet is ERC721Holder, ERC1155Holder, ReentrancyGuard {
             _requireAllowedToken(it.token);
             if (it.standard == Standard.ERC721) {
                 IERC721(it.token).safeTransferFrom(address(this), p.to, it.id);
+                    // Per item, for the same reason as the single paths: a batch that reports fifty
+                    // transfers while one of them silently did nothing is worse than one that reverts.
+                    if (IERC721(it.token).ownerOf(it.id) == address(this)) revert NothingMoved(it.token);
                 emit ERC721Sent(id, it.token, p.to, it.id);
             } else {
-                IERC1155(it.token).safeTransferFrom(address(this), p.to, it.id, it.amount, "");
+                uint256 had = IERC1155(it.token).balanceOf(address(this), it.id);
+                    IERC1155(it.token).safeTransferFrom(address(this), p.to, it.id, it.amount, "");
+                    if (IERC1155(it.token).balanceOf(address(this), it.id) >= had) revert NothingMoved(it.token);
                 emit ERC1155Sent(id, it.token, p.to, it.id, it.amount);
             }
         }

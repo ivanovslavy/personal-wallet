@@ -185,3 +185,75 @@ something that was revoked.
 The invariant was rewritten to assert containment (`allowed <= ever registered`) plus agreement with
 `isAllowed` for every listed entry. **Recorded because a failing test is not evidence of a bug until
 you have read the code it accuses.**
+
+
+## Round 2 — 2026-10-20 evening: five more lines of attack
+
+### Task 2 — the NFT exits had the same asymmetry. Closed.
+
+`executeERC721`, `executeERC1155` and every item inside `executeNFTBatch` trusted the asset
+contract exactly as `executeERC20` had. Now all four measure: ownership must have changed hands,
+or the 1155 balance must have fallen, or the call reverts with the new `NothingMoved(address)`.
+Runtime 22 030 B -> **22 716 B**, 1 860 B still free.
+
+### Task 3 — MAX_BATCH = 50 measured against real block limits. No change needed.
+
+| | propose 50 items | execute 50 items |
+|---|---|---|
+| gas | 2 555 384 | 507 784 |
+| gembatestnet (100 M block) | **2.56 %** | 0.51 % |
+| Sepolia (199.4 M block) | **1.28 %** | 0.25 % |
+
+About 39x headroom on gemba. The per-item verification added ~1 000 gas per item. The worry was
+reasonable and is now measured rather than assumed: **the cap stays at 50**.
+
+### Task 4 — one compromised owner, as a fuzz participant
+
+`owners[2]` is driven as hostile: it vetoes everything it can reach, floods the queue with junk,
+and tries to pay itself alone. Two new invariants:
+
+- `invariant_oneHostileOwnerCanNeverPayAlone` — **0 solo executions**, ever.
+- `invariant_twoHonestOwnersKeepControlOfTheMoney` — with 7-8 vetoes per run, honest payments still
+  land (2 per run). Transfers are 2-of-3 and not timelocked, so there is nothing for the hostile
+  seat to veto.
+
+🔴 **The asymmetry is the design, and it is worth stating plainly:** a hostile seat CAN deadlock
+governance forever, including its own replacement, because owner replacement is timelocked and
+therefore vetoable. What it cannot do is stop two honest owners from moving the money out to an
+allow-listed address. Losing a key is survivable; the recovery is evacuation, not eviction.
+
+### Task 5 — Gnosis Safe diff abandoned on purpose; replaced with a reference model
+
+Installing `safe-contracts` pins ethers 5.4, and `--legacy-peer-deps` pruned hardhat-toolbox and
+broke the project (reverted with `npm ci`, 150 tests green again). More importantly the models are
+not comparable: Safe signs off-chain with EIP-712 and a nonce, this wallet keeps proposals
+on-chain. There is no shared call sequence, so every divergence would be expected-by-design —
+noise dressed as rigour.
+
+Instead `ReferenceMultisig` re-implements the k-of-n core a second time, deliberately naively, and
+the fuzzer applies **identical operations to both**, asserting they agree on `isExecutable`.
+
+🔑 **It paid for itself in seven calls.** The first reference let any owner cancel anything; the
+campaign found the divergence immediately. The real contract is **stricter**: only the proposer may
+cancel, and not once the threshold is reached — otherwise one owner could pull a decision two
+owners had already agreed. The naive model was wrong and the wallet was right. After mirroring the
+real rules: **585 comparisons, 0 disagreements.**
+
+### Task 6 — symbolic proof of the confirmation recount
+
+`_confirmations` loops the CURRENT owner array, so a replaced owner's stored vote stops counting.
+Fuzzing rarely assembles "two confirm, one is replaced, then execute"; symbolically it is just a
+property. Added `check_confirmationsNeverExceedOwnerCount` and
+`check_replacedOwnersVoteStopsCounting`. **8 Halmos checks, all passing.**
+
+### Where this leaves the suite
+
+| layer | result |
+|---|---|
+| Hardhat scenarios | **150 passing** · 72/72 functions · 36/36 custom errors |
+| Foundry invariants | **24 tests** across five campaigns, 0 failures |
+| Halmos symbolic | **8 checks**, 0 failures |
+| Slither / Mythril | 11 findings / 0 High · 0 on source |
+
+**Still open, deliberately:** an independent human audit (nothing here was reviewed by anyone who
+did not write it) and a cap on registry growth. Both are listed, neither is done.

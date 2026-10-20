@@ -51,7 +51,7 @@ contract PersonalWalletInvariants is Test {
         // often. The first campaigns left the money paths starved — 1 NATIVE and 0 ERC20 executions
         // across nine runs — because execution needs quorum AND the right kind AND an allowed
         // destination, while veto/cancel killed proposals at the same rate as everything else.
-        bytes4[] memory sel = new bytes4[](32);
+        bytes4[] memory sel = new bytes4[](36);
         sel[0]  = Handler.depositNative.selector;
         sel[1]  = Handler.depositToken.selector;
         sel[2]  = Handler.proposeNative.selector;
@@ -84,6 +84,11 @@ contract PersonalWalletInvariants is Test {
         sel[29] = Handler.warpPastTimelock.selector;
         sel[30] = Handler.depositNative.selector;
         sel[31] = Handler.depositToken.selector;
+        // Task 4 — one seat treated as compromised.
+        sel[32] = Handler.hostileVetoEverything.selector;
+        sel[33] = Handler.hostileGarbage.selector;
+        sel[34] = Handler.honestPaymentDespiteHostility.selector;
+        sel[35] = Handler.hostileSoloAttempt.selector;
         targetSelector(FuzzSelector({addr: address(h), selectors: sel}));
     }
 
@@ -146,6 +151,21 @@ contract PersonalWalletInvariants is Test {
         }
     }
 
+    /// A single compromised seat must never move value on its own.
+    function invariant_oneHostileOwnerCanNeverPayAlone() public view {
+        assertEq(h.hostileSoloExecutions(), 0, "a single owner executed a payment alone");
+    }
+
+    /// LIVENESS. A hostile seat may deadlock governance — that is the price of the veto — but it
+    /// must NOT be able to stop two honest owners from moving funds to an allow-listed address.
+    /// Transfers are 2-of-3 and not timelocked, so there is nothing for it to veto.
+    function invariant_twoHonestOwnersKeepControlOfTheMoney() public view {
+        if (h.hostileVetoes() > 50) {
+            assertGt(h.honestPaymentsLanded(), 0,
+                "the hostile seat vetoed heavily AND no honest payment ever landed");
+        }
+    }
+
     function afterInvariant() public view {
         console2.log("calls driven        :", h.calls());
         console2.log("proposals created   :", h.proposalsMade());
@@ -161,5 +181,9 @@ contract PersonalWalletInvariants is Test {
         console2.log("  ALLOW_RECIP   :", h.execAllowRecip());
         console2.log("  OWNER_REPLACE :", h.execOwnerRepl());
         console2.log("  SET_POLICY    :", h.execSetPolicy());
+        console2.log("-- hostile owner --");
+        console2.log("  vetoes           :", h.hostileVetoes());
+        console2.log("  honest payments  :", h.honestPaymentsLanded());
+        console2.log("  solo executions  :", h.hostileSoloExecutions());
     }
 }

@@ -41,6 +41,16 @@ contract Handler is Test {
 
     uint256 public calls;
     uint256 public proposalsMade;
+    // ── HOSTILE OWNER (task 4). owners[2] is treated as compromised or malicious: it vetoes
+    // everything it can reach and floods the queue with junk. The question is not whether it can
+    // annoy — it can — but whether the two honest owners retain the one thing that matters:
+    // the ability to move funds to an allow-listed address. Transfers are 2-of-3 and NOT
+    // timelocked, therefore NOT vetoable. Governance is timelocked and vetoable, so the hostile
+    // seat CAN deadlock it, including its own replacement. That asymmetry is the design, and this
+    // measures it instead of assuming it.
+    uint256 public hostileVetoes;
+    uint256 public honestPaymentsLanded;
+    uint256 public hostileSoloExecutions;   // executed with ONLY the hostile confirmation — must be 0
     uint256 public execNative; uint256 public execERC20; uint256 public execAllowRecip;
     uint256 public execOwnerRepl; uint256 public execSetPolicy;
     uint256 public sawExecutable;   // диагностика: колко пъти изобщо е имало готово предложение
@@ -253,6 +263,55 @@ contract Handler is Test {
     // run, so up to 50 days elapsed inside 100 calls. Every proposal expired (max ttl 30 days) and
     // every matured timelock blew past its 7-day execution window before anyone could act. Time has
     // to move slower than the lifetimes it is competing with.
+    /// The hostile seat vetoes everything it can reach.
+    function hostileVetoEverything() public {
+        for (uint256 k; k < ids.length; k++) {
+            vm.prank(owners[2]);
+            try w.veto(ids[k]) { hostileVetoes++; } catch {}
+        }
+        calls++;
+    }
+
+    /// ...and floods the queue with junk nobody asked for.
+    function hostileGarbage(uint256 rnd) public {
+        vm.prank(owners[2]);
+        try w.proposeNative(address(uint160(bound(rnd, 1, type(uint160).max))), 1 wei, 20 days) returns (uint256 i) { ids.push(i); } catch {}
+        vm.prank(owners[2]);
+        try w.proposeOwnerReplacement(owners[0], address(uint160(bound(rnd, 1, type(uint160).max)))) returns (uint256 i) { ids.push(i); } catch {}
+        calls++;
+    }
+
+    /// LIVENESS: the two honest owners pay an allow-listed address, start to finish, in one call.
+    /// If the hostile seat could stop this, the wallet would be unusable with one bad key.
+    function honestPaymentDespiteHostility(uint256 rnd) public {
+        if (address(w).balance < 1 ether) { calls++; return; }
+        address to = allowedSet[rnd % 4];
+        vm.prank(owners[0]);
+        uint256 id;
+        try w.proposeNative(to, 1 ether, 20 days) returns (uint256 i) { id = i; ids.push(i); } catch { calls++; return; }
+        vm.prank(owners[1]);
+        try w.confirm(id) {} catch {}
+        vm.prank(owners[2]);
+        try w.veto(id) {} catch {}          // the hostile seat tries to stop it
+        (bool e, bool c, bool x, bool t, bool u) = _pre(id);
+        vm.prank(owners[0]);
+        try w.executeNative(id) {
+            _audit(id, e, c, x, t, u); execNative++; honestPaymentsLanded++; nativeOut += 1 ether;
+        } catch {}
+        calls++;
+    }
+
+    /// Could anything ever execute on the hostile confirmation ALONE?
+    function hostileSoloAttempt(uint256 rnd) public {
+        address to = allowedSet[rnd % 4];
+        vm.prank(owners[2]);
+        uint256 id;
+        try w.proposeNative(to, 1 wei, 20 days) returns (uint256 i) { id = i; ids.push(i); } catch { calls++; return; }
+        vm.prank(owners[2]);
+        try w.executeNative(id) { hostileSoloExecutions++; nativeOut += 1; } catch {}
+        calls++;
+    }
+
     function warp(uint256 s) public {
         vm.warp(block.timestamp + bound(s, 1 minutes, 2 hours));
         calls++;

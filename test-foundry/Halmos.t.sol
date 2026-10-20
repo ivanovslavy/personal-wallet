@@ -101,6 +101,45 @@ contract HalmosBoundaries is Test {
         }
     }
 
+
+    /// ── CONFIRMATION RECOUNT ───────────────────────────────────────────────────────────────────
+    /// The subtlest rule in the contract: `_confirmations` loops over the CURRENT owner array, so a
+    /// replaced owner's stored vote stops counting the moment they lose their seat. Fuzzing rarely
+    /// assembles "two confirm, then one of them is replaced, then execute"; symbolically it is just
+    /// a property.
+
+    /// The count can never exceed the size of the owner set, whatever has been confirmed.
+    function check_confirmationsNeverExceedOwnerCount(uint64 jump) public {
+        vm.assume(jump < 365 days);
+        vm.prank(o1);
+        uint256 id = w.proposeNative(dest, 1 ether, 30 days);
+        vm.prank(o2); w.confirm(id);
+        vm.prank(o3); w.confirm(id);
+        vm.warp(block.timestamp + jump);
+        assert(w.confirmations(id) <= w.OWNER_COUNT());
+    }
+
+    /// A vote cast by someone who is no longer an owner must not be counted.
+    /// Replaces o3 with a newcomer AFTER o3 has confirmed, then asserts the count fell.
+    function check_replacedOwnersVoteStopsCounting() public {
+        address newcomer = address(0xC0FFEE);
+        vm.prank(o1);
+        uint256 pay = w.proposeNative(dest, 1 ether, 30 days);   // o1 auto-confirms
+        vm.prank(o3); w.confirm(pay);                             // now 2 — o1 and o3
+        uint256 beforeCount = w.confirmations(pay);
+
+        vm.prank(o1);
+        uint256 rot = w.proposeOwnerReplacement(o3, newcomer);
+        vm.prank(o2); w.confirm(rot);
+        vm.prank(newcomer); w.acceptOwnerReplacement(rot);
+        vm.warp(block.timestamp + 72 hours + 1);
+        vm.prank(o1); w.executeOwnerReplacement(rot);
+
+        // o3 is gone. Its stored vote on `pay` must no longer weigh.
+        assert(w.confirmations(pay) == beforeCount - 1);
+        assert(!w.isExecutable(pay));                             // 1 of 2 — no longer executable
+    }
+
     /// A vetoed proposal must stay dead for ANY later moment and ANY owner.
     function check_vetoSurvivesAnyTime(uint64 jump) public {
         vm.assume(jump < 365 days);

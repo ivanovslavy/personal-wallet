@@ -1,7 +1,7 @@
 const { expect } = require("chai");
 const { ethers } = require("hardhat");
 const { time } = require("@nomicfoundation/hardhat-network-helpers");
-const { loadFixture, deployFixture, Std, HOUR, DAY, DELAY, EXEC_WINDOW, eth } = require("./helpers");
+const { loadFixture, deployFixture, deployWallet, Std, HOUR, DAY, DELAY, EXEC_WINDOW, eth } = require("./helpers");
 
 /**
  * The entry points the rest of the suite reaches only indirectly. The surface gate in
@@ -152,6 +152,59 @@ describe("ATTACK — the guard's own revert, propagated instead of swallowed", (
 
     // The whole transaction died, so nothing moved at all.
     expect(await bad.balanceOf(addr)).to.equal(eth(100));
+    expect((await wallet.getProposal(id)).executed).to.equal(false);
+  });
+});
+
+/**
+ * NothingMoved — the error added 2026-10-20 after invariant fuzzing found the exit was not
+ * symmetric with the entrance. depositERC20 always measured what arrived; the execute paths took
+ * the asset contract at its word and emitted the INTENDED amount. A contract that reports success
+ * without transferring therefore consumed the proposal and emitted a Sent event for value that
+ * never left — and every off-chain consumer of those events was told a lie.
+ *
+ * All four exits now measure. These tests make the refusal observable, which is also what keeps the
+ * surface gate honest: an error nobody ever triggers is an error nobody has tested.
+ */
+describe("NothingMoved — an exit that did not actually move the asset", () => {
+  it("refuses an ERC-20 transfer that the token silently swallowed", async () => {
+    const [, o1, o2, o3, dest] = await ethers.getSigners();
+    const Hole = await ethers.getContractFactory("BlackHoleERC20");
+    const hole = await Hole.deploy();
+    await hole.waitForDeployment();
+    const token = await hole.getAddress();
+
+    const wallet = await deployWallet([o1.address, o2.address, o3.address], {
+      requireRecipient: true,
+      requireToken: true,
+      recipients: [[dest.address, "dest"]],
+      tokens: [[token, "HOLE"]],
+    });
+
+    // The wallet holds none of it — a conforming token would revert; this one returns true.
+    await wallet.connect(o1).proposeERC20(token, dest.address, 33485n, 20 * DAY);
+    const id = await wallet.proposalCount();
+    await wallet.connect(o2).confirm(id);
+
+    await expect(wallet.connect(o1).executeERC20(id))
+      .to.be.revertedWithCustomError(wallet, "NothingMoved")
+      .withArgs(token);
+
+    // The proposal survives for a later, honest attempt instead of being consumed by a lie.
+    expect((await wallet.getProposal(id)).executed).to.equal(false);
+  });
+
+  it("the native path refuses what it cannot pay, which is why the gap was token-specific", async () => {
+    const [, o1, o2, o3, dest] = await ethers.getSigners();
+    const wallet = await deployWallet([o1.address, o2.address, o3.address], {
+      requireRecipient: true,
+      recipients: [[dest.address, "dest"]],
+    });
+    await wallet.connect(o1).proposeNative(dest.address, eth("5"), 20 * DAY);
+    const id = await wallet.proposalCount();
+    await wallet.connect(o2).confirm(id);
+    await expect(wallet.connect(o1).executeNative(id))
+      .to.be.revertedWithCustomError(wallet, "InsufficientBalance");
     expect((await wallet.getProposal(id)).executed).to.equal(false);
   });
 });
