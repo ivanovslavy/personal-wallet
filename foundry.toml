@@ -1,0 +1,33 @@
+# Foundry lives ALONGSIDE Hardhat, it does not replace it.
+#   • Hardhat keeps the 148 scenario tests, deploys, verification and the listeners.
+#   • Foundry adds what those cannot do: invariant fuzzing — millions of randomly ordered call
+#     sequences hunting for one that breaks a rule the contract must never break.
+#
+# The compiler settings MIRROR hardhat.config.js exactly, so what is fuzzed is what is deployed:
+# 0.8.28, optimizer on at 200 runs, viaIR, cancun. viaIR is not a preference here — the legacy
+# pipeline produces 26 573 B and will not fit EIP-170.
+[profile.default]
+src = "contracts"
+out = "forge-out"
+test = "test-foundry"
+cache_path = "forge-cache"
+libs = ["node_modules", "lib"]
+solc_version = "0.8.28"
+optimizer = true
+optimizer_runs = 200
+via_ir = true
+evm_version = "cancun"
+# The wallet is 21 801 B — inside EIP-170 — but the HANDLER plus test harness can exceed it, and a
+# test harness has no business being deployed anywhere. Lift the limit for tests only.
+# Invariant campaign: deliberately long. Raise runs/depth for an overnight run.
+[profile.default.invariant]
+runs = 256
+depth = 200
+fail_on_revert = false
+call_override = false
+shrink_run_limit = 5000
+[profile.deep.invariant]
+runs = 2000
+depth = 250
+fail_on_revert = false
+shrink_run_limit = 20000
