@@ -55,7 +55,10 @@ extendProvider(async (provider) => {
 const RPC_FALLBACKS = {
   gembatestnet: "https://rpc1.gembascan.io",
   sepolia: "https://ethereum-sepolia-rpc.publicnode.com",
-  mainnet: "https://eth.llamarpc.com",
+  // llamarpc was the fallback here and is DEAD — it refused every connection on 2026-10-21,
+  // which is the worst kind of fallback: the one nobody notices until the paid endpoint is
+  // down and this is all that is left. publicnode answered on the same test.
+  mainnet: "https://ethereum-rpc.publicnode.com",
   bsc: "https://bsc-dataseed1.binance.org",
   polygon: "https://polygon-rpc.com",
 };
