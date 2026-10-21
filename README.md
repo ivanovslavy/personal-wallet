@@ -263,10 +263,38 @@ a private key — only `CKDpub` is implemented, so hardened derivation is imposs
 Ledger's HSM. The CLI alternatives sideload unsigned apps and leave the device reporting
 "not genuine"; that trade is not worth making.
 
-Status word **`5515` means the device is locked** — enter the PIN. And note that opening an app
-re-enumerates the USB device, so the `/dev/hidrawN` node changes underneath you; the tool
-re-discovers it instead of caching, which is why a second command in a script does not fail with
-ENODEV.
+And signing, which is the part that actually matters:
+
+```bash
+TO=0x… AMOUNT=0.5 npx hardhat run scripts/ledger/send-eth.js --network gembatestnet
+```
+
+`send-eth.js` builds the transaction with ethers, has the **device** sign it, and broadcasts —
+again with no `@ledgerhq/*` packages. The device's `v` is not usable as returned (EIP-155 truncates
+it to one byte), so rather than reproducing the app's arithmetic it tries **both parities, recovers
+the sender from each, and keeps the one equal to the address the chip reported for that path**. A
+transaction that does not recover to the Ledger's own address is never broadcast — which removes a
+class of wrong-`v` bugs and proves the signature belongs to the expected account first.
+
+Proven on GembaChain testnet: 0.5 GMB signed on the device and mined in block 4333390, and the ETH
+address cross-checked independently — `keccak256` of the public key the chip returned reproduces
+the address string the chip reported.
+
+Three things about the protocol that cost real time:
+
+- **`B0` and `E0` are different worlds.** `B0` is answered by the dashboard *and* by every app
+  (`B0 01` = what is running, `B0 A7` = quit). `E0` belongs to whoever is in charge — the OS on the
+  dashboard, the **app** inside an app. So quitting with `E0 A7` silently does nothing while an app
+  is open, and every later command lands in the wrong place.
+- **Opening an app needs a button press on the device.** The host asks, the Nano prompts, a human
+  answers. An earlier version polled in silence for 15 s and then said "could not open <app> — is
+  it installed?", which is false and sends you to reinstall a working app.
+- **`5515` means locked** and **`6901` means the device is waiting for a human** — a confirmation
+  prompt, or a screen in the middle of locking. Neither is a fault; look at the device.
+
+Opening an app also re-enumerates the USB device, so `/dev/hidrawN` changes underneath you. The
+tool re-discovers it instead of caching, which is why a second command in a script does not fail
+with ENODEV.
 
 ### Deploying
 

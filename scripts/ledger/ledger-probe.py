@@ -7,6 +7,8 @@ Read a Ledger hardware wallet over raw USB HID. No Ledger Live, no npm, no pip.
     scripts/ledger/ledger-probe.py eth [path]    # Ethereum address  (default 44'/60'/0'/0/0)
     scripts/ledger/ledger-probe.py sol [path]    # Solana address    (default 44'/501'/0')
     scripts/ledger/ledger-probe.py btc [path]    # Bitcoin xpub + first address (default 84'/0'/0')
+    scripts/ledger/ledger-probe.py all           # all three in ONE pass — one unlock, ~30 s
+    scripts/ledger/ledger-probe.py open Ethereum # leave the device in an app (or BOLOS)
     scripts/ledger/ledger-probe.py selftest      # prove the BTC derivation against the BIP-84 vector
 
 WHY THIS EXISTS AT ALL, when Ledger Live shows the same things. Two reasons, and the second is the
@@ -53,19 +55,34 @@ after switching, instead of caching a path. Without that, the second command in 
 with ENODEV and looks like a device fault.
 """
 
-import os, sys, time, glob, hashlib, hmac
+import os, sys, time, glob, select, hashlib, hmac
 
 VENDOR = "2c97"
+# ── THE TWO CLASSES OF COMMAND, and the mistake that costs an hour
+#
+# CLA 0xB0 is answered by the dashboard AND by every app — `B0 01` asks what is running, `B0 A7`
+# quits back to the dashboard. CLA 0xE0 belongs to whoever is in charge: on the dashboard it is the
+# OS (GET_VERSION, LIST_APPS, OPEN_APP), inside an app it is the APP's own protocol. So quitting
+# with `E0 A7` silently does nothing while an app is open — the app sees a CLA it does not handle —
+# and every later command keeps landing in the wrong place. Quit is B0.
+GET_APP = "b001000000"
+QUIT_APP = "b0a7000000"
+
 SW = {"9000": "OK", "5515": "устройството е ЗАКЛЮЧЕНО — въведи PIN",
       "6e00": "командата не се разбира от текущото приложение",
+      "6901": "устройството чака ЧОВЕК — потвърждение на екрана, или е заключено",
       "6982": "security status not satisfied", "6a80": "невалидни данни",
       "6d00": "INS не се поддържа"}
 
 
 # ─────────────────────────────── transport ───────────────────────────────
 
-def find_device(timeout=12.0):
-    """The hidraw node of the first Ledger on the bus. Retries, because an app switch re-enumerates."""
+def find_device(timeout=12.0, soft=False):
+    """The hidraw node of the first Ledger on the bus. Retries, because an app switch re-enumerates.
+
+    `soft=True` returns None instead of exiting — for callers that are polling through a transition
+    and for which "not there yet" is not an error.
+    """
     deadline = time.time() + timeout
     while True:
         for h in sorted(glob.glob("/sys/class/hidraw/hidraw*")):
@@ -80,6 +97,8 @@ def find_device(timeout=12.0):
                         return "/dev/" + os.path.basename(h)
                     break
         if time.time() > deadline:
+            if soft:
+                return None
             raise SystemExit(f"   не намирам Ledger на USB (вендор {VENDOR}) — включен ли е?")
         time.sleep(0.4)
 
@@ -94,16 +113,53 @@ def _wrap(apdu, channel=0x0101):
     return out
 
 
-def exchange(dev, apdu):
-    """One APDU in, (data, status) out. `apdu` may be hex text or bytes."""
+class Timeout(Exception):
+    """The device accepted the command and said nothing back within the deadline."""
+
+
+def flush(dev):
+    """Finish off a possibly half-sent APDU.
+
+    Status 6901 turned up three times here with three different surroundings, so take it as
+    "THE DEVICE IS WAITING FOR A HUMAN" rather than as any one fault:
+      • twice it preceded 5515 by a few seconds — the screen was locking;
+      • once it was the answer to OPEN_APP while the device was showing its confirmation prompt;
+      • once it cleared after writing the frames below.
+    A process killed between the first and last report of a multi-report APDU does leave the device
+    waiting for the rest, and then every later command is read as that continuation — which these
+    empty continuations clear. But that is a cheap mitigation, not a diagnosis. **On 6901, look at
+    the device screen first.**
+    """
+    fd = os.open(dev, os.O_RDWR)
+    try:
+        for seq in range(1, 8):
+            os.write(fd, (b"\x01\x01\x05" + seq.to_bytes(2, "big")).ljust(64, b"\x00"))
+    finally:
+        os.close(fd)
+    time.sleep(0.4)
+
+
+def exchange(dev, apdu, timeout=20.0, _retried=False):
+    """One APDU in, (data, status) out. `apdu` may be hex text or bytes.
+
+    THE TIMEOUT IS NOT OPTIONAL. `os.read` on a hidraw node blocks forever, and a Ledger stays
+    silent whenever it is waiting for a button press — or when the APDU was malformed enough that
+    the app never answers. Without a deadline the tool simply hangs, which is the least useful
+    failure mode there is: it looks identical to a broken device. `select` turns that into a
+    Timeout that says what to look at.
+    """
     if isinstance(apdu, str):
         apdu = bytes.fromhex(apdu)
     fd = os.open(dev, os.O_RDWR)
     try:
         for p in _wrap(apdu):
             os.write(fd, p)
-        data, total = b"", None
+        data, total, deadline = b"", None, time.time() + timeout
         while True:
+            left = deadline - time.time()
+            if left <= 0 or not select.select([fd], [], [], left)[0]:
+                raise Timeout(f"няма отговор за {timeout:.0f} s — виж ЕКРАНА на устройството, "
+                              f"най-често чака потвърждение с бутон")
             r = os.read(fd, 64)
             if len(r) < 5:
                 break
@@ -117,7 +173,11 @@ def exchange(dev, apdu):
     finally:
         os.close(fd)
     full = data[:total]
-    return full[:-2], full[-2:].hex()
+    body, sw = full[:-2], full[-2:].hex()
+    if sw == "6901" and not _retried:
+        flush(dev)
+        return exchange(dev, apdu, timeout, _retried=True)
+    return body, sw
 
 
 def need(data, sw, what):
@@ -131,38 +191,108 @@ def need(data, sw, what):
 def app_running(dev):
     """(name, version) of whatever is open. `B0 01` is answered by the dashboard AND by every app,
     which makes it the only reliable way to ask 'where am I'."""
-    d, sw = exchange(dev, "b001000000")
+    d, sw = exchange(dev, GET_APP)
     if sw != "9000":
         return None, sw
-    i = 1
-    n = d[i]; i += 1; name = d[i:i+n].decode(errors="replace"); i += n
-    n = d[i]; i += 1; ver = d[i:i+n].decode(errors="replace")
+    # DEFENSIVE ON PURPOSE. While the device is re-enumerating after an app switch, `B0 01` can
+    # answer 9000 with a short or empty body. The first version indexed straight into it, threw
+    # IndexError out of wait_for_app — which only caught OSError — and killed the whole run with a
+    # traceback that looked like a tool crash rather than a transient. A malformed reply is just
+    # "do not know yet"; say that and let the caller poll again.
+    try:
+        i = 1
+        n = d[i]; i += 1; name = d[i:i+n].decode(errors="replace"); i += n
+        n = d[i]; i += 1; ver = d[i:i+n].decode(errors="replace")
+    except (IndexError, UnicodeDecodeError):
+        return None, sw
     return (name, ver), sw
 
 
+def wait_for_app(want, timeout=15.0):
+    """Poll until `want` is the running app, re-finding the device each round.
+
+    WHY POLLING AND NOT A SLEEP. Quitting or opening an app makes the Nano drop off USB and come
+    back, and the window is not a fixed length — a `time.sleep(1.2)` followed by one check worked
+    on a warm device and failed on a cold one, reporting "could not open Solana (now: Ethereum)"
+    because the quit had not landed yet. Waiting for the STATE instead of for a duration removes
+    the race entirely. Transient OSError here is expected: that is the node disappearing.
+    """
+    deadline = time.time() + timeout
+    while True:
+        try:
+            dev = find_device(timeout=min(1.0, max(0.2, deadline - time.time())), soft=True)
+            if dev is not None:
+                cur, sw = app_running(dev)
+                if sw == "5515":
+                    # NOT swallowed: an earlier version caught SystemExit here alongside the
+                    # transient errors, which turned "locked" into "could not open the app" —
+                    # the single most misleading message this tool could produce.
+                    raise SystemExit("   устройството е ЗАКЛЮЧЕНО — въведи PIN и пробвай пак")
+                if cur and cur[0] == want:
+                    return dev, cur
+        except (OSError, Timeout):
+            pass                             # the node vanishing mid-switch is the normal case
+        if time.time() > deadline:
+            return None, None
+        time.sleep(0.3)
+
+
 def ensure_app(dev, want):
-    """Open `want`, re-discovering the device afterwards. Returns the (possibly new) hidraw path."""
+    """Make `want` the running app and return its (possibly new) hidraw path."""
     cur, sw = app_running(dev)
     if sw == "5515":
-        raise SystemExit(f"   устройството е ЗАКЛЮЧЕНО — въведи PIN и пробвай пак")
+        raise SystemExit("   устройството е ЗАКЛЮЧЕНО — въведи PIN и пробвай пак")
     if cur and cur[0] == want:
         return dev
-    if cur and cur[0] not in ("BOLOS",):
-        exchange(dev, "e0a7000000")          # quit back to the dashboard
-        time.sleep(1.2)
-        dev = find_device()
+    if cur and cur[0] != "BOLOS":
+        try:
+            exchange(dev, QUIT_APP)          # quit back to the dashboard
+        except (OSError, Timeout):
+            pass                             # it may vanish mid-reply; that IS the quit
+        d, _ = wait_for_app("BOLOS")
+        if d is None:
+            raise SystemExit("   не успях да се върна на началния екран (dashboard)")
+        dev = d
+    if want == "BOLOS":
+        d, _ = wait_for_app("BOLOS")
+        if d is None:
+            raise SystemExit("   не успях да се върна на началния екран (dashboard)")
+        return d
     name = want.encode()
-    exchange(dev, bytes.fromhex("e0d80000") + bytes([len(name)]) + name)
-    time.sleep(1.8)                          # the device re-enumerates; the old node is gone
-    dev = find_device()
-    cur, sw = app_running(dev)
-    if not cur or cur[0] != want:
-        raise SystemExit(f"   не успях да отворя „{want}“ (сега: {cur}, статус {sw}). "
-                         f"Инсталирано ли е приложението?")
+    try:
+        d, sw = exchange(dev, bytes.fromhex("e0d80000") + bytes([len(name)]) + name)
+        if sw not in ("9000", "6d00", "6e00"):
+            # 6d00/6e00 here mean the command landed inside an app instead of the dashboard, which
+            # the poll below recovers from. Anything else is a real refusal worth naming.
+            print(f"   OPEN_APP върна {sw}" + (f" — {SW[sw]}" if sw in SW else ""))
+    except (OSError, Timeout):
+        pass
+
+    # 🔴 OPENING AN APP NEEDS A BUTTON PRESS ON THE DEVICE.
+    # The host asks; the Nano shows a prompt and waits for a human. An earlier version polled for
+    # 15 seconds in silence and then reported "could not open <app> — is it installed?", which is
+    # false and sends you to reinstall a perfectly good app. Say what is actually needed, then wait
+    # long enough for a person to reach the device.
+    dev, cur = wait_for_app(want, timeout=4)
+    if dev is None:
+        print(f"   👉 ПОТВЪРДИ НА УСТРОЙСТВОТО отварянето на „{want}“ — чакам до 60 s…")
+        dev, cur = wait_for_app(want, timeout=60)
+    if dev is None:
+        raise SystemExit(f"   „{want}“ не се отвори. Или не беше потвърдено на устройството, или "
+                         f"приложението липсва — `ledger-probe.py apps` показва какво има на чипа.")
     return dev
 
 
 def cmd_info(dev):
+    # GET_VERSION is CLA E0, so it only answers on the dashboard. Asking first what is running —
+    # and stepping back to the dashboard if needed — is why this works regardless of state,
+    # instead of dying with 6901 and looking like a fault.
+    cur, sw = app_running(dev)
+    if sw == "5515":
+        raise SystemExit("   устройството е ЗАКЛЮЧЕНО — въведи PIN")
+    if cur and cur[0] != "BOLOS":
+        print(f"   отворено е „{cur[0]} {cur[1]}“ — връщам се на началния екран, за да прочета OS-а")
+        dev = ensure_app(dev, "BOLOS")
     d = need(*exchange(dev, "e001000000"), "GET_VERSION")
     target = d[:4].hex(); i = 4
     def field():
@@ -351,7 +481,9 @@ def cmd_eth(dev, path="44'/60'/0'/0/0"):
     n = d[i]; i += 1; addr = d[i:i+n].decode()
     print(f"   път     : m/{path}")
     print(f"   адрес   : 0x{addr}")
-    print(f"   pubkey  : {pub.hex()[:34]}…")
+    # The full key, not a prefix: it is what lets the address be re-derived independently
+    # (keccak256 of the 64 bytes after the 0x04 prefix, last 20 bytes) instead of trusted as text.
+    print(f"   pubkey  : {pub.hex()}")
 
 def cmd_sol(dev, path="44'/501'/0'"):
     dev = ensure_app(dev, "Solana")
@@ -401,6 +533,48 @@ def cmd_selftest():
     return 0 if ok else 1
 
 
+def cmd_apdu(dev, hexapdu, timeout="30"):
+    """Send one raw APDU and print `<data><SW>` as hex.
+
+    The reason this exists: the transport — framing, re-enumeration, the select-based deadline,
+    the 6901 recovery — should live in ONE place. Tools that need to sign (which needs keccak and
+    RLP, so they are written in JavaScript against the project's existing ethers) call this instead
+    of re-implementing USB HID in a second language and getting the timeout wrong again.
+
+    It cannot leak a key: the device has no command that returns one.
+    """
+    d, sw = exchange(dev, hexapdu, timeout=float(timeout))
+    print(d.hex() + sw)
+
+
+def cmd_open(dev, want="BOLOS"):
+    """Leave the device sitting in a named app — or back on the dashboard.
+
+    Exists so other tools do not have to re-implement the app switch. Getting it right means
+    knowing that QUIT is CLA B0 while OPEN is CLA E0, and that both re-enumerate the USB device;
+    one place in the tree should carry that knowledge.
+    """
+    dev = ensure_app(dev, want)
+    cur, _ = app_running(dev)
+    print(f"   отворено: {cur[0]} {cur[1]}  ({dev})")
+
+
+def cmd_all(dev):
+    """All three addresses in ONE run.
+
+    WHY THIS EXISTS. A Nano X locks its screen after a minute or two of inactivity, and each app
+    switch re-enumerates the USB device and takes a couple of seconds. Reading the three coins as
+    three separate invocations therefore means three unlocks and a good chance of landing mid-lock
+    with a 6901 that looks like a fault. One pass, one unlock, around half a minute.
+    """
+    for label, fn in (("ETHEREUM", cmd_eth), ("SOLANA", cmd_sol), ("BITCOIN", cmd_btc)):
+        print(f"   ── {label}")
+        try:
+            fn(find_device())
+        except SystemExit as e:
+            print(f"      🔴 {e}")
+
+
 def main():
     args = sys.argv[1:] or ["info"]
     cmd, rest = args[0], args[1:]
@@ -413,8 +587,11 @@ def main():
     elif cmd == "eth":  cmd_eth(dev, *rest)
     elif cmd == "sol":  cmd_sol(dev, *rest)
     elif cmd == "btc":  cmd_btc(dev, *rest)
+    elif cmd == "all":  cmd_all(dev)
+    elif cmd == "open": cmd_open(dev, *rest)
+    elif cmd == "apdu": cmd_apdu(dev, *rest)
     else:
-        raise SystemExit(f"   непозната подкоманда „{cmd}“ — info | apps | eth | sol | btc | selftest")
+        raise SystemExit(f"   непозната подкоманда „{cmd}“ — info | apps | eth | sol | btc | all | open | apdu | selftest")
 
 if __name__ == "__main__":
     main()
