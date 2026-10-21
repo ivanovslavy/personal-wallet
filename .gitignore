@@ -54,6 +54,9 @@ forge-cache/
 medusa-corpus/
 # crytic-compile's intermediate solc export — rebuilt by every medusa run.
 crytic-export/
+# Python bytecode — produced whenever the Ledger tool is imported rather than run.
+__pycache__/
+*.pyc
 
 # Pre-change contract snapshots — local rollback, not repo history
 backups/
