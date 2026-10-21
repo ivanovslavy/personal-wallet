@@ -286,12 +286,12 @@ at or past Cancun. If a future target is older, lower this to `paris` rather tha
 
 ## Evidence
 
-### Local suite — 148 tests, and a surface gate instead of line coverage
+### Local suite — 150 tests, and a surface gate instead of line coverage
 
 ```
-npm test      148 passing
+npm test      150 passing
                external functions invoked : 72/72  (100.0%)
-               custom errors returned     : 35/35  (100.0%)
+               custom errors returned     : 36/36  (100.0%)
                receive() / fallback()     : yes / yes
 ```
 
@@ -462,12 +462,12 @@ at or past Cancun. If a future target is older, lower this to `paris` rather tha
 
 ## Evidence
 
-### Local suite — 148 tests, and a surface gate instead of line coverage
+### Local suite — 150 tests, and a surface gate instead of line coverage
 
 ```
-npm test      148 passing
+npm test      150 passing
                external functions invoked : 72/72  (100.0%)
-               custom errors returned     : 35/35  (100.0%)
+               custom errors returned     : 36/36  (100.0%)
                receive() / fallback()     : yes / yes
 ```
 

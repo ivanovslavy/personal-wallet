@@ -278,3 +278,266 @@ Both verified, funded to match the previous generation, strict on both registrie
 
 Until the sweep completes the listeners watch **three addresses per chain**. Drop the older two
 from `<NET>_WATCH` once they are empty.
+
+---
+
+## Task 10 — the sweep rehearsed on a fork before it is attempted for real
+
+On **2026-10-23 after ~20:27 UTC** four wallets holding real assets get emptied into two. The
+72-hour timelock on those recipient approvals cannot be re-run: if the plan is missing a step, the
+cost is three days, not a retry. So the whole sweep was executed against a **local fork of each
+live chain** first — `scripts/migration-rehearsal.js`, which forks, impersonates the owners, warps
+past the timelock, executes the pending approval, moves every asset, and then **verifies each old
+wallet is empty, item by item**.
+
+### Results — both chains clean
+
+| | gemba `0x3F63…` | gemba `0x0b59…` | sepolia `0x628b…` | sepolia `0x3eC1…` |
+|---|---|---|---|---|
+| ERC-20 | 6 | 6 | 3 | 3 |
+| NFT positions | 5 | 3 | 5 | 0 |
+| native | 1.85 GMB | 1.85 GMB | 0.02 ETH | 0.02 ETH |
+| proposals needed | 8 | 8 | 5 | 4 |
+| empty afterwards | ✓ | ✓ | ✓ | ✓ |
+
+**gemba: 16 proposals, 50 transactions, 4 737 378 gas. sepolia: 9 proposals, 29 transactions,
+2 780 787 gas. Zero reverts, zero leftovers.** One `proposeNFTBatch` took all five NFT positions
+in a single proposal (623 987 gas for five, 473 387 for three) — the 50-item batch limit is nowhere
+near binding.
+
+### 🔴 What the rehearsal actually caught — the inventory, not the contract
+
+The first rehearsal reported **"1 NFT to move"** where there were five, and three "failures" that
+were my script treating NFT contracts as ERC-20s. Nothing was wrong with the wallet. Everything was
+wrong with how assets were being discovered, and every one of these would have left assets stranded
+in a contract whose recipient approval had already been spent:
+
+1. **ERC-165 lies.** `Kotkata by GembaPay` answers `supportsInterface(0x01ffc9a7)` with **true** and
+   `supportsInterface(0x80ac58cd)` — ERC-721 — with **false**, while `ownerOf`, `name`, `symbol` and
+   `totalSupply` all work and the indexer lists it as ERC-721. Classifying by advertised interface
+   files it as a fungible token, the sweep calls `transfer(address,uint256)` on it, and the proposal
+   reverts. Classification must be **behavioural**: `decimals()` answers → ERC-20; `ownerOf(id)`
+   answers → ERC-721; `balanceOf(addr,id)` answers → ERC-1155.
+2. **A token-id walk finds nothing.** The mocks mint at **9001+** with `totalSupply` of 4, so
+   walking `0..totalSupply` misses every one of them — and on a fork that proxies each unknown slot
+   to the live node it also costs one round trip per index, which is why the first run hung past ten
+   minutes.
+3. **`eth_getLogs` fails differently on every free RPC, and one of them fails SILENTLY.**
+   `rpc1.gembascan.io` rejects the call outright. `publicnode` answers `pruned history unavailable`
+   (code 4444) — it keeps only ~10k blocks of logs, so no chunk size helps. `1rpc` caps at 50
+   blocks. Infura and dRPC serve full history at 10 000 blocks per call. Worst of all, a **Hardhat
+   fork answers historical ranges with an empty list instead of an error** — which reads as "no
+   NFTs" and gets believed. ethers reports every one of these as `could not coalesce error`; the
+   real reason is in `error.error.message`.
+4. **Etherscan V2 has no free NFT inventory.** `addresstokennftinventory` answers
+   `Missing Or invalid Action name`. My first version returned `[]` on that — silently reporting an
+   empty wallet. A refusing indexer must **throw**.
+5. **A fork reports Hardhat's own chain id (31337)**, so indexer selection keyed on chain id
+   silently fell through to a method the node could not serve. The chain id has to come from the
+   live node.
+
+`scripts/lib/holdings.js` now does discovery for both the rehearsal and the live sweep: indexer
+first (Blockscout on gemba), chunked log scan second (Infura on Sepolia, chunk size halving on
+refusal, lower bound from `getcontractcreation`), and **every row re-read from the chain** before
+it is believed — an indexer one block behind would otherwise hand us an id the wallet no longer
+owns. Assets found outside the wallet's own registry are reported separately as `stranded`,
+because moving them needs a new registration first, which is its own timelock.
+
+### The live sweep, from the rehearsal
+
+| step | gemba ×2 | sepolia ×2 |
+|---|---|---|
+| execute the matured approval | 1 tx each | 1 tx each |
+| ERC-20s, one proposal each | 6 × 3 tx | 3 × 3 tx |
+| all NFTs in one batch | 1 × 3 tx | 1 × 3 tx (only `0x628b…`) |
+| native, LAST | 1 × 3 tx | 1 × 3 tx |
+| **total** | **50 tx, ~4.74 M gas** | **29 tx, ~2.78 M gas** |
+
+Native goes last on purpose: the earlier steps are paid by the owners, not the wallet, so emptying
+native first would not help and emptying it last leaves nothing behind.
+
+---
+
+## Task 8 — a second fuzzer, and the fourth vacuous campaign it had to survive
+
+**Medusa 1.5.1** (`medusa.json`, `test-foundry/medusa/MedusaProps.sol`) — chosen over Echidna
+because it is the maintained successor and because its search strategy genuinely differs: 8 parallel
+workers, coverage-guided mutation of whole call **sequences**, and a corpus that persists across
+runs. Foundry restarts from a clean slate every time.
+
+The harness is written **independently** of the Foundry one, on purpose. The Foundry campaign only
+ever shows the wallet inputs that have already passed through my assumptions; if one of those
+assumptions is wrong, that campaign is blind in exactly that direction and still reports green. So
+this harness bounds **nothing** in its main surface — unbounded `uint256` amounts, ttls of zero,
+ids that do not exist, the wallet's own address as a destination, garbage token addresses — and
+explores ARGUMENTS where Foundry explores ORDERINGS.
+
+### 🐤 Two canaries, two vacuous campaigns caught in 90 seconds each
+
+| version | result reported | what was actually happening |
+|---|---|---|
+| properties only | **10/10 PASSED**, 1.9 M calls, 0 failures | `targetContracts` is medusa's whole world — it does **not** fuzz dynamically deployed contracts. It called `w()` and `usdc()` for 400 000 calls and never touched the wallet. |
+| + unbounded actions | all PASSED | 1 proposal in 400 000 calls, **zero executions** — a random `uint256` id never lands on a live proposal twice, so every property about executed proposals was quantified over an empty set. |
+| + bounded reachability | PASSED, both canaries FAIL | proposals are made, confirmed, warped past and executed — but see the coverage measurement below, which showed this was still only half true. |
+
+The canaries are two properties that are **false the instant anything real happens** —
+`proposalCount() == 0` and "nothing was ever executed". Both must **FAIL**. They are kept commented
+in the harness as the proof-of-life procedure: *no green fuzzing result means anything until a
+deliberately-false property has been shown to fail.* This is the same trap that voided three
+Foundry campaigns earlier in this document, hit twice more by a different tool.
+
+### What medusa covers, and what it deliberately does not
+
+Medusa evaluates `property_*` after every call, so it can only express rules that are true of
+**storage at rest**. Transition rules — "it was not early *at the moment* it executed" — need a
+ghost recorded during the call, which is Foundry's job. The two suites are complements, and the
+harness says so in its own header rather than implying coverage it does not have:
+
+- **covered by medusa** — owner set integrity; executed ⇒ sufficiently confirmed; executed and
+  cancelled mutually exclusive; registry coherence and containment; native and token balances never
+  overstated; the wallet and the zero address are never allowed recipients.
+- **Foundry only** — timelock-at-execution, expiry-at-execution, double execution, strict mode at
+  execution, hostile-owner outcomes, the differential against the reference model, and the entire
+  **ERC-721 / ERC-1155 surface**: the medusa harness deploys one fungible token and nothing else,
+  so the NFT batch paths are not fuzzed by it at all. Said plainly rather than left for someone to
+  discover — a second tool is worth having only if its blind spots are written down.
+
+---
+
+## Task 9 — the symbolic suite was too easy, and the deeper one found something
+
+`HalmosBoundaries` proved eight properties in **4.9 seconds over 1–5 paths each**. That is not a
+compliment. It means almost nothing in those checks was symbolic: the `setUp` builds one concrete
+wallet, the proposal is one concrete kind with concrete arguments, and the only symbol reaching the
+solver is a time jump. Such a check proves a property of ONE state for all times — useful, and a
+long way from "for all states".
+
+`test-foundry/HalmosDeep.t.sol` widens the symbols rather than adding more checks of the same
+shape: the chain's **current** time is symbolic (not just the jump), amounts and TTLs are symbolic
+so the accept/reject boundary is proven instead of sampled, the proposal **id** is symbolic so the
+guards are proven for ids that do not exist as well as the one exactly at `proposalCount`, and
+every "if and only if" is checked in both directions — a guard that is merely sufficient, refusing
+legitimate work, fails here too.
+
+| | baseline suite | deep suite |
+|---|---|---|
+| checks | 8 | 8 |
+| paths explored | 30 | **61** |
+| solver time | 4.9 s | **27.0 s** |
+| deepest single check | 5 paths | **17 paths / 12.0 s** |
+
+**16 symbolic checks, 91 paths, 0 counterexamples** — after one was fixed.
+
+### 🔴 The counterexample, and what it was really about
+
+`check_delayBoundsAreExact` asserted the obvious: a policy proposal is accepted exactly when the
+delay is inside `[MIN_DELAY, MAX_DELAY]`. Halmos answered with
+
+```
+Counterexample: p_nd_uint64 = 0x3f480        // 259 200 = 72 hours
+```
+
+a value squarely inside the range that the contract nevertheless **refuses**. The contract is
+right and the assertion was wrong: 72 hours with both registries required *is* the current policy,
+and `NoPolicyChange()` rejects a proposal that changes nothing. The solver found the one value in
+the entire `uint64` space where my rule and the contract's rule disagree — a fuzzer would have had
+to guess exactly `DEFAULT_DELAY`, with both booleans matching, to see it.
+
+That is the third time in this document that a tool found **my** mistake rather than the
+contract's, and it is the reason this file records the corrections as prominently as the findings:
+a suite whose failures are never investigated converges on testing its author's assumptions.
+
+The behaviour itself is worth stating as a finished thought, because it has an operational
+consequence: **a no-op policy proposal is refused at proposal time, not at execution.** It cannot
+be parked in the queue looking harmless.
+
+### What the deep suite now proves that nothing else did
+
+- `effectiveAt` never wraps, **at any chain time** — including timestamps near the `uint64`
+  ceiling, where `uint64(block.timestamp) + delay` is checked arithmetic. Either the proposal is
+  refused or `effectiveAt` is strictly in the future; a wrapped deadline would be a timelock
+  defeated by arithmetic rather than by waiting. No fuzzer generates a timestamp near 2⁶⁴.
+- `expiresAt` likewise, for **every** accepted TTL at **every** chain time, with the refusal
+  reasons proven exhaustive: out of range, or the sum not fitting.
+- `isExecutable` is **exactly** the conjunction it documents, for symbolic ids including
+  non-existent ones — proven as an equivalence, so an over-strict guard fails too.
+- **Two** confirmations are never enough for governance, at any time, for either pair of owners.
+  The baseline only proved that one is not enough; two is the boundary that stops a pair from
+  rewriting the policy behind the third owner's back.
+- A veto survives confirmations arriving **after** it, not merely the passage of time.
+- A native transfer never exceeds the balance, for any symbolic amount, with no fourth outcome
+  between "refused" and "balance covered it" — in particular no partial send.
+
+### 🔴 And coverage is MEASURED, not assumed — the third vacuum
+
+With both canaries failing the campaign looked honest, so a 20-minute run went in: **739 459 calls,
+6 157 sequences, 0 failures, 1 603 branches.** The claim I was about to write was that the
+uncovered half of the contract is the NFT paths. The lcov report said otherwise:
+
+```
+PersonalWallet.sol   161/324 lines = 49.7 %
+executeNative        8 lines, ALL uncovered
+executeERC20         9 lines, ALL uncovered
+```
+
+**Not one payment ever executed.** The executions the canary detected were all governance ones.
+Reaching "executable" needs a propose, two confirmations and an execute to land on the **same id**,
+and picking `seed % proposalCount` makes that a 1/n coincidence that has to happen three times in a
+row. Exactly the defect that voided the first Foundry campaign, in a different costume.
+
+The fix is the same medicine: `fuzz_confirmAll` and `fuzz_executeAnything` sweep **every live id**
+in a bounded window instead of picking one, leaving the fuzzer in charge of when and of everything
+that happened before.
+
+| | before | after |
+|---|---|---|
+| `PersonalWallet.sol` lines | 161/324 = 49.7 % | **193/324 = 59.6 %** |
+| `executeNative` | 0/8 | **8/8** |
+| `executeERC20` | 0/9 | **9/9** |
+| `executeAllowRecipient` / `executeSetPolicy` / `executeOwnerReplacement` | partial | **fully covered** |
+| branches | 1 603 | **1 744** |
+
+🔑 **A green campaign with a canary that fails is still not enough.** The canary proves *something*
+real happened; only coverage shows *what*. Both are cheap and neither replaces the other.
+
+### 🔴 What the corrected campaign then found — again in my property, not the contract
+
+With payments finally executing, `property_executedWasSufficientlyConfirmed` failed on a five-call
+sequence that is worth reading in full because the answer is counter-intuitive:
+
+1. proposal 1 (`ALLOW_RECIPIENT`) is proposed, confirmed by all three owners, and **executed
+   legitimately**;
+2. proposal 2 (`OWNER_REPLACE`) executes and replaces `0x10000` — one of proposal 1's confirmers;
+3. `confirmations(1)` now reads **2** against a `requiredConfirmations(1)` of **3**.
+
+Nothing is wrong. `_confirmations` counts over the **current** owners by design — "Counted over the
+current owners on purpose", and `HalmosBoundaries.check_replacedOwnersVoteStopsCounting` proves it:
+a departed owner's vote must not keep authorising anything.
+
+The lesson is about the property. **"Executed ⇒ sufficiently confirmed" is a transition rule
+wearing a state rule's clothes**, because its right-hand side is re-evaluated against a mutable
+set. As a state property it holds only while the owner set is unchanged, and that is now exactly
+what the medusa version asserts; the unconditional form stays in Foundry, which records the count
+at the moment of the call.
+
+That is the **fourth** time in this document a tool found my mistake rather than the contract's.
+It is also why medusa's assertion mode is left enabled on the harness itself: it caught
+`(seed + id) % 3` overflowing when the fuzzer passed 2²⁵⁶−1 — a bug in this file, reported as an
+arithmetic panic, exactly as it should be.
+### What the 59.6 % does and does not mean
+
+Under `viaIR` medusa's lcov attribution is **unreliable for view functions**, and that was measured
+rather than assumed: `isExecutable`, `confirmations` and `requiredConfirmations` report zero lines
+even though a property calls all three on every evaluation — and so does `owners()`, which is called
+from inside `fuzz_executeAnything`, a transaction. The mutating paths (`propose*`, `execute*`,
+`deposit*`) are attributed correctly, which is what the before/after comparison above rests on.
+
+So the number is a **floor**, useful comparatively and not as an absolute. What is genuinely
+untouched by this campaign is the **ERC-721 / ERC-1155 surface** — `proposeNFTBatch`,
+`executeNFTBatch`, `executeERC721`, `executeERC1155`, `depositERC721`, `depositERC1155` — because
+the harness deploys one fungible token and nothing else. Those paths are covered by Foundry's
+`Assets.invariants.t.sol`, and extending the medusa harness to them is the obvious next step for
+this file rather than a gap being hidden.
+
+**Final medusa state: 40 tests, 0 failures, 250 977 calls over 2 087 sequences, 1 739 branches,
+corpus 130.**

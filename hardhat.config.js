@@ -129,6 +129,18 @@ module.exports = {
   networks: {
     hardhat: {
       chainId: 31337,
+      // Forking a CUSTOM chain needs its hardfork history spelled out: Hardhat only ships one for
+      // the chains it knows, and without it a fork of GembaChain dies with "No known hardfork for
+      // execution on historical block". Both chains run Cancun from genesis as far as we care.
+      chains: {
+        821207: { hardforkHistory: { cancun: 0 } },
+        11155111: { hardforkHistory: { cancun: 0 } },
+      },
+      // FORK_RPC turns the in-memory node into a fork of a live chain. Set via the environment
+      // rather than hardcoded, because the same config has to serve plain unit tests. It has to be
+      // declared HERE and not through hardhat_reset: a reset drops the `chains` above, and without
+      // the hardfork history a fork of a custom chain refuses to execute anything.
+      ...(process.env.FORK_RPC ? { forking: { url: process.env.FORK_RPC } } : {}),
       // Only lifted for the coverage run, which cannot use viaIR — see the note above.
       // Instrumented, legacy-compiled bytecode is far larger and its deployment runs out of gas
       // against a normal block limit, so the coverage run also gets a huge one.

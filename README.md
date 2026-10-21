@@ -11,7 +11,7 @@ Ships with two event listeners that watch the deployed wallets and email on ever
 
 ```
 contracts/      the wallet and the test tokens it is exercised against
-test/           148 tests, including an adversarial suite
+test/           150 tests, including an adversarial suite
 scripts/        deploy · verify · live end-to-end run · secret scan
 listeners/      two chain watchers + their systemd units
 docs/           the contract reference, the design notes, the Slither triage
@@ -45,6 +45,36 @@ this project exists to avoid.
 | 2026-10-12 | sepolia | [`0x628b6A26…ccF56`](https://sepolia.etherscan.io/address/0x628b6A266fFb4acED394D3eb7879B880B7eccF56#code) | both exit fixes |
 | 2026-10-20 am | gemba | [`0x0b59725c…12A9`](https://gembascan.io/address/0x0b59725cb461a5F81352E239B4Ccf546e10712A9#code) | the NFT exit checks |
 | 2026-10-20 am | sepolia | [`0x3eC14206…1811`](https://sepolia.etherscan.io/address/0x3eC142069f86B874a05448F4EB9Af9db4F7D1811#code) | the NFT exit checks |
+
+#### The sweep has been rehearsed, not planned
+
+The recipient approvals above take 72 hours and can be spent **once**. A sweep that turns out to be
+missing a step is not a retry — it is three more days. So the whole thing was executed against a
+**local fork of each live chain** first:
+
+```
+npm run rehearse:gemba     # forks, impersonates the owners, warps past the timelock, sweeps,
+                           # then verifies each old wallet is EMPTY, item by item
+FORK_RPC=<sepolia> LOG_RPC=<archive sepolia> npm run rehearse:sepolia
+```
+
+Sepolia needs `LOG_RPC` pointed at a node that keeps full log history — the public one prunes to
+~10 000 blocks and would report the five Kotkata NFTs as absent.
+
+Result: gemba **16 proposals / 50 transactions / 4.74 M gas**, sepolia **9 / 29 / 2.78 M**, zero
+reverts, zero leftovers, and one `proposeNFTBatch` taking all five NFT positions at once. The live
+run is `scripts/migration-sweep.js`, the same plan with a dry-run default — it prints every step and
+sends nothing unless `I_MEAN_IT=yes`.
+
+What the rehearsal actually caught was the **inventory**, not the contract: the first pass reported
+"1 NFT to move" where there were five. `Kotkata by GembaPay` answers ERC-165 for ERC-721 with
+**false** while `ownerOf` works; the mocks mint at id 9001+ so a `0..totalSupply` walk finds
+nothing; `eth_getLogs` fails four different ways across free RPC tiers and a Hardhat fork answers
+historical ranges with an **empty list instead of an error**. Every one of those would have left
+assets stranded in a contract whose one-shot approval had already been spent. Asset discovery now
+lives in `scripts/lib/holdings.js`, classifies by **behaviour** rather than advertised interface,
+and re-reads every row from the chain before believing it. The full account is in
+[`docs/INVARIANTS.md`](docs/INVARIANTS.md).
 
 Why two generations in one day: invariant fuzzing found the ERC-20 exit never checked that the
 asset had actually moved, which was fixed and deployed in the morning. The same campaign, extended
@@ -97,7 +127,7 @@ cd personal-wallet
 npm install
 cp .env.example .env        # then fill it in — see below
 npm run build               # hardhat compile
-npm test                    # 148 tests
+npm test                    # 150 tests
 ```
 
 ### Filling in `.env`
@@ -199,7 +229,7 @@ refuses to run on any of them.
 ## Working with it
 
 ```bash
-npm test                      # 148 tests + the surface-coverage gate
+npm test                      # 150 tests + the surface-coverage gate
 npm run slither               # static analysis of the deployed contract
 npm run deploy:gemba          # deploy (also :sepolia :bsc :polygon :mainnet)
 npm run verify:gemba          # source verification (also :sepolia :bsc :polygon :mainnet)
@@ -340,12 +370,31 @@ Two corrections the tests forced, both worth knowing if you build something simi
 ## Testing and analysis
 
 ```
-npm test        148 passing
-                external functions invoked : 72/72  (100.0%)
-                custom errors returned     : 35/35  (100.0%)
-npm run live:gemba   245 checks, 0 failures against the live chain
-npm run slither      11 findings, 0 High — every one triaged in docs/SLITHER.md
+npm test              150 passing
+                      external functions invoked : 72/72  (100.0%)
+                      custom errors returned     : 36/36  (100.0%)
+npm run live:gemba    245 checks, 0 failures against the live chain
+npm run slither       11 findings, 0 High — every one triaged in docs/SLITHER.md
+npm run invariants    19 invariants in 4 suites · 36 weighted selectors · Foundry
+                      8 suites, 25 tests, 0 failures, 436 s
+npm run medusa        a second fuzzer, different search strategy
+npm run halmos        8 symbolic checks, 30 paths
+npm run halmos:deep   8 more, 61 paths — symbolic time, amounts, ttls and ids
 ```
+
+**Four tools, because each is blind where the others see.** `npm test` proves every entry point
+and every custom error was actually exercised. Foundry invariant fuzzing explores **orderings** of
+legal calls — that is what found the one real defect in this contract (Finding 1 below). Medusa
+explores **arguments**: unbounded amounts, ttls of zero, ids that do not exist, with an
+independently written harness, because a campaign driven through my own assumptions is blind in
+exactly the directions I got wrong. Halmos proves the boundaries neither fuzzer can land on —
+timestamps near the `uint64` ceiling, the single value where an accept/reject rule flips.
+
+🔴 **No green fuzzing result means anything until a deliberately-false property has been shown to
+fail — and a failing canary is still not enough, because only coverage shows WHAT ran.** Six
+campaigns in this project reported "all passed" while exercising far less than they claimed; one of
+them had both canaries failing and still had never executed a single payment. The full account, and
+the two cheap procedures that catch this, are in [`docs/INVARIANTS.md`](docs/INVARIANTS.md).
 
 `solidity-coverage` cannot instrument a contract this size under Cancun — its instrumented
 initcode exceeds the EIP-3860 cap, which no Hardhat setting lifts. Rather than shrink the contract
