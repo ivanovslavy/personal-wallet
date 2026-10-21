@@ -238,6 +238,36 @@ npm run check:secrets         # refuse to publish a credential
 npm run hooks:install         # wire the secret scan as a git hook
 ```
 
+### Reading the hardware wallet
+
+The three owner keys currently live in `.env` as plaintext, which makes the 2-of-3 threshold
+**1-of-1 in practice** — one file read is all three signatures. Moving the seats onto a hardware
+signer is the fix, and `scripts/ledger/ledger-probe.py` is the groundwork: it talks to a Ledger
+over raw USB HID, with **no dependencies at all** — standard library only, including its own
+base58, bech32, secp256k1 and BIP-32.
+
+```bash
+scripts/ledger/ledger-probe.py selftest   # run this FIRST — proves the derivation against the
+                                          # official BIP-84 vector before any address is trusted
+scripts/ledger/ledger-probe.py info       # firmware, bootloader, onboarding state, open app
+scripts/ledger/ledger-probe.py apps       # what is actually on the chip, with hashes
+scripts/ledger/ledger-probe.py eth        # address at 44'/60'/0'/0/0
+scripts/ledger/ledger-probe.py sol        # address at 44'/501'/0'
+scripts/ledger/ledger-probe.py btc        # xpub at 84'/0'/0' + the first receive address
+```
+
+Zero dependencies is the point, not a flourish: the device exists to shrink the trust surface, and
+reading it through a transitive dependency tree hands that back. It can neither derive nor request
+a private key — only `CKDpub` is implemented, so hardened derivation is impossible by construction
+— and it cannot install or remove apps, because official app installation needs a secure channel to
+Ledger's HSM. The CLI alternatives sideload unsigned apps and leave the device reporting
+"not genuine"; that trade is not worth making.
+
+Status word **`5515` means the device is locked** — enter the PIN. And note that opening an app
+re-enumerates the USB device, so the `/dev/hidrawN` node changes underneath you; the tool
+re-discovers it instead of caching, which is why a second command in a script does not fail with
+ENODEV.
+
 ### Deploying
 
 ```bash
