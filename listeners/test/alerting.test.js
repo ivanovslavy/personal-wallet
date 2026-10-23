@@ -1,5 +1,5 @@
 /**
- * Regression test for the alert cadence.
+ * Regression test for the alert cadence AND for what counts as worth waking a human.
  *
  * WHY THIS EXISTS: the sepolia listener sent 48 mails a day reading
  * "0 RPC failure(s), 40 switch(es)" — every one of them saying nothing was wrong. Two defects
@@ -28,6 +28,21 @@ function makeWatcher(extra = {}) {
 
 let pass = 0;
 const ok = (msg) => { pass++; console.log(`  ok ${pass} — ${msg}`); };
+
+/** The timeout numbers are the whole fix for the 01:09 hang, so they are pinned here. */
+function timeoutChecks() {
+  const src = require("fs").readFileSync(require("path").join(__dirname, "..", "lib", "rpc.js"), "utf8");
+  const req = Number((src.match(/DEFAULT_REQUEST_TIMEOUT_MS = ([0-9_]+)/) || [])[1].replace(/_/g, ""));
+  const wsrc = require("fs").readFileSync(require("path").join(__dirname, "..", "lib", "watcher.js"), "utf8");
+  const logs = Number((wsrc.match(/LOGS_TIMEOUT_MS = ([0-9_]+)/) || [])[1].replace(/_/g, ""));
+  // The watchdog calls a listener hung at max(5 × pollMs, 5 min). ethers' own default request
+  // timeout is 300 000 ms — the SAME number — which is why one silent endpoint cost a restart.
+  const watchdogPatience = 5 * 60_000;
+  assert.ok(req < watchdogPatience / 2, `request timeout ${req} must be well under ${watchdogPatience}`);
+  assert.ok(logs < watchdogPatience, `logs timeout ${logs} must be under ${watchdogPatience}`);
+  assert.ok(req <= logs, "a single read must not be given longer than a logs range");
+  return { req, logs, watchdogPatience };
+}
 
 async function main() {
   // 1) The exact live symptom: many switches, nothing failed → NO mail at all.
@@ -118,6 +133,27 @@ async function main() {
     ok(`20 cycles of alternating call types → ${sw} switches (was ~2 per cycle = ~40)`);
   }
 
-  console.log(`\n  ${pass}/7 passed`);
+  // 5) A CLEAN STOP IS SILENT. It is always somebody's act — a restart, a deploy, the watchdog —
+  //    and each of those reports itself. See the note at the top of the file.
+  {
+    const { w, sent } = makeWatcher();
+    w.stopping = true;
+    await w.start();
+    const stopped = sent.filter((m) => /STOPPED/i.test(m.subject));
+    assert.strictEqual(stopped.length, 0, "a clean shutdown must not mail");
+    ok(`clean stop → 0 mails (was 1, and it was the scariest subject in the system)`);
+  }
+
+  // 6) The timeouts that caused the 01:09 restart cannot drift back into a race with the watchdog.
+  {
+    const { req, logs, watchdogPatience } = timeoutChecks();
+    ok(`request ${req / 1000}s · logs ${logs / 1000}s · watchdog patience ${watchdogPatience / 1000}s — no race`);
+  }
+
+  // Assert the count, do not just print it. A hardcoded "7" next to a growing list of cases is
+  // how a test file quietly stops running half of itself.
+  const EXPECTED = 9;
+  console.log(`\n  ${pass}/${EXPECTED} passed`);
+  assert.strictEqual(pass, EXPECTED, `expected ${EXPECTED} checks, ran ${pass}`);
 }
 main().catch((e) => { console.error("FAILED:", e.message); process.exitCode = 1; });

@@ -21,6 +21,13 @@
  */
 
 const CHUNK_RETRY_SPLIT = 4;
+/**
+ * The request budget for a logs call, which is larger than the pool's default because getLogs over
+ * `maxSpan` (1 000 blocks) is legitimately slower than reading one block. It is still a fifth of
+ * the watchdog's max(5 × pollMs, 5 min), so even the slow path cannot stall a cycle long enough to
+ * be mistaken for a hang — the mistake that restarted this listener on 2026-10-23 at 01:09.
+ */
+const LOGS_TIMEOUT_MS = 60_000;
 
 // keccak of the event signatures, hardcoded so no ABI is needed for tokens we know nothing about.
 const TOPIC_TRANSFER = "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef";        // ERC-20 and ERC-721
@@ -164,15 +171,21 @@ class Watcher {
       await this.sleep(wait);
     }
     this.log(`${this.network}: stopped`);
-    // Say so. A listener that goes quiet is indistinguishable from a listener that is fine.
-    await this.mailer.send({
-      subject: `[${this.network}] listener STOPPED`,
-      text: `The listener has shut down cleanly.\n\n`
-        + `Position held: block ${this.state.data.lastBlock}\n`
-        + `Events seen: ${this.state.data.eventsSeen} · alerts sent: ${this.state.data.alertsSent}\n\n`
-        + `If this was not deliberate, the chain is no longer being watched. systemd is set to\n`
-        + `restart it, and the watchdog timer checks every 5 minutes that it is actually polling.\n`,
-    }).catch(() => {});
+    // 🔴 NO MAIL HERE ANY MORE, and the reason matters.
+    //
+    // This used to send "[<net>] listener STOPPED" on every clean shutdown. But a clean shutdown
+    // is ALWAYS somebody's deliberate act — `systemctl restart`, a deploy, or the watchdog
+    // recovering a hung cycle — and all three already report themselves. So the most alarming
+    // subject line in the whole system fired precisely when nothing was wrong: on 2026-10-23 at
+    // 01:09 one hung cycle produced three mails, of which "listener STOPPED" was the scariest and
+    // the least informative, and a routine restart the evening before had produced it too.
+    //
+    // What a listener that is genuinely not watching looks like is the watchdog's job to notice:
+    // it runs every 5 minutes, checks `lastPollAt` rather than whether the process exists, and
+    // mails when it has to restart one — or when a restart FAILS, which is the case that actually
+    // needs a human. A crash is still reported: run.js mails on an uncaught error before exiting.
+    //
+    // Alert on the condition you would act on, not on every state change that precedes it.
   }
 
   /**
@@ -338,10 +351,10 @@ class Watcher {
       const [erc20ish, multi] = await Promise.all([
         this.pool.withProvider(
           (p) => p.getLogs({ topics: [TOPIC_TRANSFER, null, to32], fromBlock: from, toBlock: to }),
-          { capability: "logsWithoutAddress" }).catch(() => []),
+          { capability: "logsWithoutAddress", timeoutMs: LOGS_TIMEOUT_MS }).catch(() => []),
         this.pool.withProvider(
           (p) => p.getLogs({ topics: [[TOPIC_1155_SINGLE, TOPIC_1155_BATCH], null, null, to32], fromBlock: from, toBlock: to }),
-          { capability: "logsWithoutAddress" }).catch(() => []),
+          { capability: "logsWithoutAddress", timeoutMs: LOGS_TIMEOUT_MS }).catch(() => []),
       ]);
 
       for (const l of erc20ish) {
@@ -446,7 +459,8 @@ class Watcher {
   async getLogs(from, to, depth = 0) {
     try {
       return await this.pool.withProvider((p) =>
-        p.getLogs({ address: this.addresses, fromBlock: from, toBlock: to }));
+        p.getLogs({ address: this.addresses, fromBlock: from, toBlock: to }),
+        { timeoutMs: LOGS_TIMEOUT_MS });
     } catch (e) {
       const msg = String(e.message || e);
       const tooWide = /range|limit|too many|exceed|more than|block range/i.test(msg);

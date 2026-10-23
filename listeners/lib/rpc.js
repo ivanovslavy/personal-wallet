@@ -16,6 +16,11 @@
 const { ethers } = require("ethers");
 
 const DEFAULT_COOLDOWN_MS = 120_000;
+/** One read. ethers' own default is 300 000 ms, the same as the watchdog's patience. */
+const DEFAULT_REQUEST_TIMEOUT_MS = 20_000;
+/** getLogs over maxSpan (1 000 blocks) is legitimately slower than a single read. Still 1/5 of the
+ *  watchdog's patience, so even the slow path cannot turn a cycle into a hang. */
+const DEFAULT_LOGS_TIMEOUT_MS = 60_000;
 const DEFAULT_ROUNDS = 3;
 const ROUND_PAUSE_MS = 2_000;
 
@@ -42,6 +47,9 @@ class RpcPool {
   constructor(o) {
     this.name = o.name;
     this.chainId = Number(o.chainId);
+    // Far below the watchdog's max(5 × pollMs, 5 min) — see the note in _provider(). A plain read
+    // that has not answered in 20 s is not going to; waiting is how a cycle turns into a hang.
+    this.requestTimeoutMs = o.requestTimeoutMs ?? DEFAULT_REQUEST_TIMEOUT_MS;
     this.log = o.log || (() => {});
     this.cooldownMs = o.cooldownMs ?? DEFAULT_COOLDOWN_MS;
     // How many complete passes over the endpoint list before giving up. On the second and later
@@ -80,11 +88,27 @@ class RpcPool {
     return this.endpoints.filter((e) => e.failedUntil <= now);
   }
 
-  _provider(e) {
+  _provider(e, timeoutMs = this.requestTimeoutMs) {
+    // 🔴 THE REQUEST TIMEOUT IS THE WHOLE POINT OF THIS FUNCTION, so it goes first.
+    //
+    // ethers' FetchRequest defaults to **300 000 ms**. The watchdog calls a listener hung once it
+    // has not polled for max(5 × pollMs, 5 min) — which at a 20 s poll is also **300 000 ms**. The
+    // two numbers were identical, so an endpoint that accepted the connection and then went silent
+    // held one cycle for the full five minutes and the watchdog restarted the listener on the same
+    // second. That is exactly what happened on 2026-10-23 at 01:09:18 — the failures in the
+    // journal are at 01:04:18 and 01:09:18, five minutes apart to the second.
+    //
+    // A silent endpoint must therefore be abandoned in seconds, not minutes. Reads of a block or a
+    // receipt are small; logs over a range can legitimately take longer, so that call passes its
+    // own, larger budget via opts.timeoutMs. Both stay far below the watchdog's patience, so the
+    // pool gets to rotate and finish the cycle instead of racing a restart.
+    const req = new ethers.FetchRequest(e.url);
+    req.timeout = timeoutMs;
+
     // staticNetwork: the chain id is known, so ethers must not probe for it on every call.
     // cacheTimeout -1: ethers caches eth_call/getBalance results for 250 ms by default, which has
     // bitten this setup before on nonce reads (see the ethers v6 note in the project memory).
-    const p = new ethers.JsonRpcProvider(e.url, this.chainId, {
+    const p = new ethers.JsonRpcProvider(req, this.chainId, {
       staticNetwork: ethers.Network.from(this.chainId),
       batchMaxCount: 1,
     });
@@ -101,6 +125,11 @@ class RpcPool {
    *        An endpoint that fails such a call twice is remembered as not supporting it and is
    *        skipped for that capability alone; its health is never penalised, because refusing a
    *        kind of call is not the same as being down.
+   */
+  /**
+   * @param {object} [opts]
+   * @param {string} [opts.capability]
+   * @param {number} [opts.timeoutMs] per-call request budget; defaults to requestTimeoutMs
    */
   async withProvider(fn, opts = {}) {
     const cap = opts.capability || null;
@@ -126,7 +155,7 @@ class RpcPool {
       for (const e of avail) {
         let provider;
         try {
-          provider = this._provider(e);
+          provider = this._provider(e, opts.timeoutMs);
           const out = await fn(provider);
           this.current = e.label;
           const bucket = cap || "";

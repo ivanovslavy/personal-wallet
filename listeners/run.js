@@ -67,6 +67,7 @@ async function main() {
   const pool = new RpcPool({ name: network, chainId: cfg.chainId, endpoints, log });
   const state = new State(stateFile(network));
   const mailer = new Mailer({ ...mailConfig(network), log });
+  fatalMailer = mailer;        // see the crash handler at the bottom of this file
 
   // Prove the mail path before claiming to be a working alerter. A listener that cannot send is
   // worse than no listener, because it looks like everything is fine.
@@ -96,7 +97,35 @@ async function main() {
   await watcher.start();
 }
 
-main().catch((e) => {
-  log("fatal", { error: String(e.message || e).slice(0, 600) });
+/**
+ * Reporting a CRASH, which is a different thing from a shutdown.
+ *
+ * The watcher deliberately does not mail when it stops cleanly: a clean stop is always somebody's
+ * act (a restart, a deploy, the watchdog) and those report themselves. A crash is the opposite —
+ * nobody asked for it and nobody else knows. So this is the one exit worth an email, and until now
+ * it only wrote a line to the journal, which is exactly the "goes quiet and looks fine" failure
+ * the whole design is meant to avoid.
+ *
+ * The mail is best-effort and bounded: if SMTP is also broken, the process must still exit rather
+ * than hang on it, so the send races a 10-second timer and the exit happens either way. systemd
+ * restarts the unit and the watchdog checks within five minutes regardless.
+ */
+let fatalMailer = null;
+
+main().catch(async (e) => {
+  const msg = String(e.message || e).slice(0, 600);
+  log("fatal", { error: msg });
+  if (fatalMailer) {
+    await Promise.race([
+      fatalMailer.send({
+        subject: `[${network || "listener"}] listener CRASHED`,
+        text: `The listener exited on an unhandled error — nobody asked it to stop.\n\n`
+          + `${msg}\n\n`
+          + `systemd will restart it, and the watchdog checks every 5 minutes that it is really\n`
+          + `polling. If this mail arrives repeatedly, the restart is not fixing it.\n`,
+      }).catch(() => {}),
+      new Promise((r) => setTimeout(r, 10_000)),
+    ]);
+  }
   process.exit(1);
 });
