@@ -30,8 +30,7 @@
     "halmos": "$HOME/.venvs/halmos/bin/halmos --contract HalmosBoundaries --forge-build-out forge-out --statistics",
     "halmos:deep": "$HOME/.venvs/halmos/bin/halmos --contract HalmosDeep --forge-build-out forge-out --statistics",
     "medusa": "PATH=$HOME/.venvs/slither/bin:$HOME/go/bin:$PATH medusa fuzz --config medusa.json",
-    "rehearse:gemba": "FORK_RPC=https://rpc1.gembascan.io OLD=0x3F6357a74Bec93F6281aA1FC705133eC71a1BaE2,0x0b59725cb461a5F81352E239B4Ccf546e10712A9 NEW=0x586CfE0D34D812F53FbefD78F9Ad0243f79A685D hardhat run scripts/migration-rehearsal.js --network hardhat",
-    "rehearse:sepolia": "OLD=0x628b6A266fFb4acED394D3eb7879B880B7eccF56,0x3eC142069f86B874a05448F4EB9Af9db4F7D1811 NEW=0x992877042cB4f33222218f503361D4d957a749f5 hardhat run scripts/migration-rehearsal.js --network hardhat"
+    "rehearse": "node -e \"if(!process.env.OLD||!process.env.NEW){console.error('\\nИскам OLD=0x…,0x… и NEW=0x… в средата.\\nАдресите НЕ се вкаменяват тук: един остарял адрес в npm скрипт е точно начинът да насочиш операция към изпразнен договор.\\nТекущите адреси са в deployed/<network>-latest.json\\n'); process.exit(1)}\" && hardhat run scripts/migration-rehearsal.js --network hardhat"
   },
   "license": "MIT",
   "devDependencies": {

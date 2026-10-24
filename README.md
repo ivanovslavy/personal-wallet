@@ -31,6 +31,13 @@ Both are configured the same way: three owners, threshold two, **both allowlists
 token registry and the recipient registry — and a 72-hour timelock on anything that widens the
 wallet's reach.
 
+🔑 **These two addresses are the only live ones.** The machine-readable source of truth is
+`deployed/<network>-latest.json` → `contracts[0].address`; read it rather than copying an address
+out of prose. Nothing in this repository is configured to act on an earlier generation: no npm
+script, no `.env.example` default, no script default. The four addresses listed below appear only
+as history and in the immutable `deployed/<timestamp>.json` records, which exist precisely so that
+"what was deployed when" survives — and all four are empty.
+
 ### Earlier deployments — retired and emptied on 2026-10-24
 
 Two generations held assets until the recipient approvals matured (3-of-3, 2026-10-23 20:26 UTC).
@@ -93,6 +100,33 @@ redeployed. See [`docs/INVARIANTS.md`](docs/INVARIANTS.md).
 Full records — constructor arguments, compiler settings, transaction hashes — are in `deployed/`.
 
 ---
+
+## 🔴 Mainnet will use fresh keys — all of them
+
+Everything above is a testnet. Nothing here has ever guarded real money, which is why the key
+hygiene has been allowed to be as it is: three owner keys and the deployer sit in `.env` in
+plaintext, so the 2-of-3 threshold is **1-of-1 in custody** — one file read is three signatures.
+That is a known, accepted trade for testnet.
+
+**Mainnet starts from zero keys.** None of the addresses in this repository carries over:
+
+| seat | where the key comes from | notes |
+|---|---|---|
+| deployer | **newly generated**, offline | signs the deployment only; never an allowlisted recipient |
+| owner 1 | **newly generated**, offline | taken offline once the setup transactions are done |
+| owner 2 | **newly generated**, offline | same |
+| owner 3 | **the Ledger** (Nano X, SE 2.8.0) | hardware signature; `scripts/ledger/` reads and signs with it |
+
+🔑 **The owner private keys never need to touch the deploy machine.** `scripts/deploy.js` accepts
+`OWNER_1/2/3` as plain **addresses** and only falls back to deriving them from private keys. So
+generate the two cold keys offline, put their addresses in the environment, and the window in which
+two of three signing keys exist on a connected disk is **zero** — not "short".
+
+🔑 And the deployer must **not** be allowlisted as a recipient on mainnet. On the testnet wallets it
+is, labelled "deployer / escape hatch"; that convenience is what turns a deploy key into a payout
+destination. Mainnet gets no escape hatch.
+
+See the `personal-wallet-hardware-keys-plan` note for the ordering and the open questions.
 
 ## The security model, in one rule
 
