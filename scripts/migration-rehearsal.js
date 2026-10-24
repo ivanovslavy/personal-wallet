@@ -20,6 +20,21 @@ const { ethers, network } = require("hardhat");
 const { inventory } = require("./lib/holdings.js");
 
 const log = (...a) => console.log("  ", ...a);
+
+/**
+ * A provider that gives up on a silent endpoint.
+ *
+ * ethers' FetchRequest defaults to **300 000 ms**. A log scan over ~90 000 blocks makes dozens of
+ * getLogs calls, and one endpoint going quiet froze this script for five minutes with no output at
+ * all — indistinguishable from a hang. The listeners had the identical defect and the identical
+ * fix (listeners/lib/rpc.js); it is the same number in a second place.
+ */
+function withTimeout(url, ms) {
+  const req = new ethers.FetchRequest(url);
+  req.timeout = ms;
+  return new ethers.JsonRpcProvider(req, undefined, { batchMaxCount: 1 });
+}
+
 const DELAY = 25 * 24 * 3600;   // the per-proposal delay the live sweep will use
 
 async function impersonate(addr) {
@@ -43,12 +58,12 @@ async function main() {
   const olds = process.env.OLD.split(",").map(a => ethers.getAddress(a.trim()));
   // Discovery runs against the LIVE chain, not the fork: forks answer eth_getLogs for historical
   // ranges with an empty list instead of an error, which would report "no NFTs" and be believed.
-  const live = new ethers.JsonRpcProvider(process.env.FORK_RPC, undefined, { batchMaxCount: 1 });
+  const live = withTimeout(process.env.FORK_RPC, 30_000);
   // And the chain id must come from the LIVE node too — the fork reports Hardhat's own 31337, no
   // indexer matches that, and discovery silently falls back to a log scan the node cannot serve.
   const chainId = Number((await live.getNetwork()).chainId);
   const logProvider = process.env.LOG_RPC
-    ? new ethers.JsonRpcProvider(process.env.LOG_RPC, undefined, { batchMaxCount: 1 })
+    ? withTimeout(process.env.LOG_RPC, 60_000)
     : live;
 
   let proposals = 0, txs = 0, gas = 0n;

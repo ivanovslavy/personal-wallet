@@ -31,20 +31,28 @@ Both are configured the same way: three owners, threshold two, **both allowlists
 token registry and the recipient registry — and a 72-hour timelock on anything that widens the
 wallet's reach.
 
-### Earlier deployments, being retired
+### Earlier deployments — retired and emptied on 2026-10-24
 
-Two generations are on their way out. Each has the current wallet allowlisted as a recipient —
-3-of-3, maturing **2026-10-23** — so the assets move across through the same guarded path as any
-other transfer, with no privileged escape route. Until the sweep completes the listeners watch
-**all three addresses per chain**, because an unwatched contract holding value is exactly the gap
-this project exists to avoid.
+Two generations held assets until the recipient approvals matured (3-of-3, 2026-10-23 20:26 UTC).
+Everything moved across through the same guarded path as any other transfer — propose, confirm,
+execute — with **no privileged escape route**: the old contracts have no sweep function, no owner
+withdrawal, nothing that the guardian rules do not also apply to. That is why it took 79
+transactions instead of four.
 
-| deployed | chain | address | what it lacks |
-|---|---|---|---|
-| 2026-10-12 | gemba | [`0x3F6357a7…1BaE2`](https://gembascan.io/address/0x3F6357a74Bec93F6281aA1FC705133eC71a1BaE2#code) | both exit fixes |
-| 2026-10-12 | sepolia | [`0x628b6A26…ccF56`](https://sepolia.etherscan.io/address/0x628b6A266fFb4acED394D3eb7879B880B7eccF56#code) | both exit fixes |
-| 2026-10-20 am | gemba | [`0x0b59725c…12A9`](https://gembascan.io/address/0x0b59725cb461a5F81352E239B4Ccf546e10712A9#code) | the NFT exit checks |
-| 2026-10-20 am | sepolia | [`0x3eC14206…1811`](https://sepolia.etherscan.io/address/0x3eC142069f86B874a05448F4EB9Af9db4F7D1811#code) | the NFT exit checks |
+The listeners now watch **one address per chain**. They were narrowed only AFTER each old contract
+was proven empty item by item, because an unwatched contract holding value is exactly the gap this
+project exists to avoid.
+
+| deployed | chain | address | what it lacked | swept |
+|---|---|---|---|---|
+| 2026-10-12 | gemba | [`0x3F6357a7…1BaE2`](https://gembascan.io/address/0x3F6357a74Bec93F6281aA1FC705133eC71a1BaE2#code) | both exit fixes | ✅ empty |
+| 2026-10-12 | sepolia | [`0x628b6A26…ccF56`](https://sepolia.etherscan.io/address/0x628b6A266fFb4acED394D3eb7879B880B7eccF56#code) | both exit fixes | ✅ empty |
+| 2026-10-20 am | gemba | [`0x0b59725c…12A9`](https://gembascan.io/address/0x0b59725cb461a5F81352E239B4Ccf546e10712A9#code) | the NFT exit checks | ✅ empty |
+| 2026-10-20 am | sepolia | [`0x3eC14206…1811`](https://sepolia.etherscan.io/address/0x3eC142069f86B874a05448F4EB9Af9db4F7D1811#code) | the NFT exit checks | ✅ empty |
+
+The current gemba wallet now holds the consolidated position: **5.56 GMB**, six ERC-20s at
+3,000,000,000 each (three wallets' worth), and **15 NFT positions** — six MockERC721, five Kotkata
+and four ERC-1155 — all arriving through `proposeNFTBatch` in one proposal per wallet.
 
 #### The sweep has been rehearsed, not planned
 

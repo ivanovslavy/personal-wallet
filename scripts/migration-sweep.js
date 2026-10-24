@@ -26,6 +26,21 @@ const { ethers, network } = require("hardhat");
 const { inventory } = require("./lib/holdings.js");
 
 const log = (...a) => console.log("  ", ...a);
+
+/**
+ * A provider that gives up on a silent endpoint.
+ *
+ * ethers' FetchRequest defaults to **300 000 ms**. A log scan over ~90 000 blocks makes dozens of
+ * getLogs calls, and one endpoint going quiet froze this script for five minutes with no output at
+ * all — indistinguishable from a hang. The listeners had the identical defect and the identical
+ * fix (listeners/lib/rpc.js); it is the same number in a second place.
+ */
+function withTimeout(url, ms) {
+  const req = new ethers.FetchRequest(url);
+  req.timeout = ms;
+  return new ethers.JsonRpcProvider(req, undefined, { batchMaxCount: 1 });
+}
+
 const LIVE = process.env.I_MEAN_IT === "yes";
 const DELAY = 25 * 24 * 3600;
 
@@ -44,7 +59,7 @@ async function main() {
   const net = await ethers.provider.getNetwork();
   const chainId = Number(net.chainId);
   const logProvider = process.env.LOG_RPC
-    ? new ethers.JsonRpcProvider(process.env.LOG_RPC, undefined, { batchMaxCount: 1 })
+    ? withTimeout(process.env.LOG_RPC, 60_000)
     : ethers.provider;
 
   const signers = await ethers.getSigners();
