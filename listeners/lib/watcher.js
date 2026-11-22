@@ -65,9 +65,13 @@ class Watcher {
       // at all, so a refused attempt to drain the wallet produces no event and, without this,
       // no alert — which is precisely the signal most worth having.
       watchFailed: true,
-      // Scanning for failed transactions costs one getBlock per block. Skipped on a long
-      // catch-up rather than firing thousands of calls; the log scan still covers that range.
+      // Scanning for failed transactions costs one block read per block, so at most this many
+      // blocks are scanned per cycle. A long catch-up is NOT skipped any more (2026-11-22): the scan
+      // keeps its own position (state.failedScanBlock) and works through the backlog cycle by cycle.
       maxFailedScanBlocks: 300,
+      // A failed-transaction scan that cannot get past one block for this long is mailed — once —
+      // and again when it moves on. It never steps over the block.
+      failedScanStallMs: 15 * 60_000,
       // When every endpoint has failed every round, STOP trying at the poll cadence and wait.
       // Hammering dead endpoints every 20 seconds helps nobody, fills the journal, and can get
       // the listener rate-limited precisely when it needs to come back.
@@ -90,6 +94,7 @@ class Watcher {
     this.inBackoff = false;
     this.anomalies = [];
     this.lastAnomalyMail = 0;
+    this.failedScanStall = null;   // { block, since, error, alerted } while the scan is held at a block
     // Running counters for the daily heartbeat. Switches land here instead of in an email.
     this.tally = { switches: 0, failures: 0, since: new Date().toISOString() };
     this.lastSummaryMail = Date.now();
@@ -256,12 +261,14 @@ class Watcher {
 
     const t = this.tally;
     const hours = ((Date.now() - new Date(t.since).getTime()) / 3_600_000).toFixed(1);
-    const health = t.failures === 0 ? "healthy" : `${t.failures} RPC failure(s)`;
+    const health = (t.failures === 0 ? "healthy" : `${t.failures} RPC failure(s)`)
+      + (this.failedScanStall ? ` · failed-tx scan HELD at ${this.failedScanStall.block}` : "");
     const lines = [
       `${this.network} listener is alive. Nothing here needs action unless a number looks wrong.`,
       "",
       `period          : ${t.since} .. ${new Date().toISOString()} (${hours} h)`,
       `position        : block ${this.state.data.lastBlock}`,
+      `failed-tx scan  : ${this.watchFailed ? `block ${this.state.data.failedScanBlock ?? "-"} (${this.state.data.failedScanBlock == null ? "not started" : `${this.state.data.lastBlock - this.state.data.failedScanBlock} behind`})${this.failedScanStall ? ` · HELD at ${this.failedScanStall.block}` : ""}` : "off"}`,
       `events seen     : ${this.state.data.eventsSeen}`,
       `alerts sent     : ${this.state.data.alertsSent}`,
       `rpc failures    : ${t.failures}`,
@@ -308,12 +315,12 @@ class Watcher {
     }
 
     if (this.watchFailed && !this.stopping) {
-      const span = target - rangeStart + 1;
-      if (span > this.maxFailedScanBlocks) {
-        this.log(`${this.network}: ${span} blocks to catch up — skipping the failed-transaction scan for this range`);
-      } else if (span > 0) {
-        failed.push(...await this.scanFailed(rangeStart, target));
-      }
+      // The scan has its OWN position and never skips a block (2026-11-22). Before, a catch-up over
+      // maxFailedScanBlocks skipped the range with a journal line, and a block that could not be read
+      // was stepped over in silence. Now it trails the log scan, at most maxFailedScanBlocks per cycle,
+      // and stops AT a block it cannot read — retrying it next cycle and mailing if it stays stuck.
+      if (this.state.data.failedScanBlock == null) this.state.set({ failedScanBlock: rangeStart - 1 });
+      failed.push(...await this.scanFailed(this.state.data.lastBlock));
     }
 
     // A deposit made through the proper path emits BOTH a wallet event and a token Transfer.
@@ -345,16 +352,20 @@ class Watcher {
    * cannot turn into a flood.
    */
   async scanIncoming(from, to) {
+    // 🔴 An error here is THROWN, not turned into "no arrivals" (2026-11-22). It used to be
+    // `.catch(() => [])` — and the position then moved past the range, so an unreadable range
+    // reported nothing, silently. Thrown, the cycle fails BEFORE the position is saved, the range is
+    // read again next cycle, and five failed cycles in a row mail "listener cannot read the chain".
     const out = [];
     for (const target of this.addresses) {
       const to32 = pad32(target);
       const [erc20ish, multi] = await Promise.all([
         this.pool.withProvider(
           (p) => p.getLogs({ topics: [TOPIC_TRANSFER, null, to32], fromBlock: from, toBlock: to }),
-          { capability: "logsWithoutAddress", timeoutMs: LOGS_TIMEOUT_MS }).catch(() => []),
+          { capability: "logsWithoutAddress", timeoutMs: LOGS_TIMEOUT_MS }),
         this.pool.withProvider(
           (p) => p.getLogs({ topics: [[TOPIC_1155_SINGLE, TOPIC_1155_BATCH], null, null, to32], fromBlock: from, toBlock: to }),
-          { capability: "logsWithoutAddress", timeoutMs: LOGS_TIMEOUT_MS }).catch(() => []),
+          { capability: "logsWithoutAddress", timeoutMs: LOGS_TIMEOUT_MS }),
       ]);
 
       for (const l of erc20ish) {
@@ -417,38 +428,110 @@ class Watcher {
    * and a refused attempt to drain the wallet is the single most useful thing to be told about.
    * So the blocks are read with their transactions, those addressed to the wallet are picked out,
    * and their receipts checked for status 0.
+   *
+   * 🔴 THE BLOCK IS READ RAW (`eth_getBlockByNumber`), NOT THROUGH ethers' getBlock (2026-11-22).
+   * ethers parses EVERY transaction of a block, and one stranger's EIP-7702 transaction with an
+   * invalid authorization (yParity 0xbc — BSC block 134791636, 21.11.2026) makes the whole block
+   * unreadable on every endpoint alike: 728 "failures" in seven minutes that were no endpoint's fault,
+   * and the block was then stepped over in silence. Only `to`, `from`, `hash`, `input` and `value` are
+   * needed, so the raw JSON is read and nothing else is parsed. ethers 6.17.0 is the latest release.
+   *
+   * 🔴 NO BLOCK IS EVER SKIPPED. The position (state.failedScanBlock) moves one block at a time and only
+   * after that block — and every receipt it needed — was read. On any error the scan stops at that
+   * block, keeps it, and tries it again next cycle; held longer than failedScanStallMs, it mails.
+   *
+   * @param {number} upTo the highest block the log scan has finished (the scan never runs ahead of it)
    */
-  async scanFailed(from, to) {
+  async scanFailed(upTo) {
     const watched = new Set(this.addresses);
     const out = [];
-    for (let n = from; n <= to && !this.stopping; n++) {
-      let block;
-      try { block = await this.pool.withProvider((p) => p.getBlock(n, true)); } catch { continue; }
-      if (!block) continue;
-      for (const tx of (block.prefetchedTransactions || [])) {
-        if (!tx.to || !watched.has(tx.to.toLowerCase())) continue;
-        let rc;
-        try { rc = await this.pool.withProvider((p) => p.getTransactionReceipt(tx.hash)); } catch { continue; }
-        if (!rc || rc.status !== 0) continue;
-        // Why did it fail? The same call replayed at that block returns the revert data.
-        let reason = "(could not decode)";
-        try {
-          await this.pool.withProvider((p) => p.call({ to: tx.to, from: tx.from, data: tx.data, value: tx.value, blockTag: n }));
-        } catch (e) {
-          const d = e?.data ?? e?.info?.error?.data;
-          if (typeof d === "string" && d.length >= 10) {
-            try { const parsed = this.iface.parseError(d); reason = parsed ? `${parsed.name}(${parsed.args.map(String).join(", ")})` : d.slice(0, 20); }
-            catch { reason = d.slice(0, 20); }
-          }
-        }
-        out.push({
-          address: tx.to, blockNumber: n, txHash: tx.hash, logIndex: 0,
-          name: "REFUSED: a transaction to the wallet reverted",
-          args: { from: tx.from, selector: String(tx.data).slice(0, 10), reason, value: tx.value.toString() },
-        });
+    const start = this.state.data.failedScanBlock + 1;
+    const end = Math.min(upTo, start + this.maxFailedScanBlocks - 1);
+    for (let n = start; n <= end && !this.stopping; n++) {
+      let found;
+      try {
+        found = await this.failedInBlock(n, watched);
+      } catch (e) {
+        await this.noteFailedScanStall(n, e, upTo);
+        break;                                   // hold the position AT this block; retry next cycle
       }
+      out.push(...found);
+      this.state.set({ failedScanBlock: n });
+      await this.noteFailedScanProgress(n, upTo);
     }
     return out;
+  }
+
+  /** Every refused transaction to the wallet in block n. Throws if anything could not be read. */
+  async failedInBlock(n, watched) {
+    const tag = "0x" + n.toString(16);
+    const block = await this.pool.withProvider((p) => p.send("eth_getBlockByNumber", [tag, true]));
+    if (!block || !Array.isArray(block.transactions)) throw new Error(`block ${n} not returned`);
+    const out = [];
+    for (const tx of block.transactions) {
+      if (typeof tx !== "object" || !tx) throw new Error(`block ${n} came back without transaction bodies`);
+      if (!tx.to || !watched.has(String(tx.to).toLowerCase())) continue;
+      const rc = await this.pool.withProvider((p) => p.getTransactionReceipt(tx.hash));
+      if (!rc) throw new Error(`no receipt for ${tx.hash} in block ${n}`);
+      if (rc.status !== 0) continue;
+      const value = BigInt(tx.value || "0x0");
+      // Why did it fail? The same call replayed at that block returns the revert data.
+      let reason = "(could not decode)";
+      try {
+        await this.pool.withProvider((p) => p.call({ to: tx.to, from: tx.from, data: tx.input, value, blockTag: n }));
+      } catch (e) {
+        const d = e?.data ?? e?.info?.error?.data;
+        if (typeof d === "string" && d.length >= 10) {
+          try { const parsed = this.iface.parseError(d); reason = parsed ? `${parsed.name}(${parsed.args.map(String).join(", ")})` : d.slice(0, 20); }
+          catch { reason = d.slice(0, 20); }
+        }
+      }
+      out.push({
+        address: tx.to, blockNumber: n, txHash: tx.hash, logIndex: 0,
+        name: "REFUSED: a transaction to the wallet reverted",
+        args: { from: tx.from, selector: String(tx.input || "0x").slice(0, 10), reason, value: value.toString() },
+      });
+    }
+    return out;
+  }
+
+  /** The scan could not get past block n. Logged every time; mailed once it has been held failedScanStallMs. */
+  async noteFailedScanStall(n, e, upTo) {
+    const error = String(e?.shortMessage || e?.message || e).slice(0, 300);
+    if (!this.failedScanStall || this.failedScanStall.block !== n) {
+      this.failedScanStall = { block: n, since: Date.now(), error, alerted: false };
+    }
+    this.failedScanStall.error = error;
+    this.log(`${this.network}: failed-transaction scan held at block ${n} — will retry it, not skip it`, { error, behind: upTo - n + 1 });
+    const st = this.failedScanStall;
+    if (!st.alerted && Date.now() - st.since >= this.failedScanStallMs) {
+      st.alerted = true;
+      await this.mailer.send({
+        subject: `[${this.network}] failed-transaction scan HELD at block ${n}`,
+        text: `The scan for refused transactions to the wallet cannot read block ${n} and has been\n`
+          + `stopped there for ${Math.round((Date.now() - st.since) / 60000)} minutes. It does NOT skip the block: it retries it every\n`
+          + `cycle and continues from there the moment it can be read.\n\n`
+          + `Last error:\n${error}\n\n`
+          + `Blocks still to scan: ${upTo - n + 1} (up to ${upTo}).\n`
+          + `Incoming transfers and the wallet's own events are NOT affected — they are read from logs\n`
+          + `and are at block ${this.state.data.lastBlock}.\n`,
+      }).catch(() => {});
+    }
+  }
+
+  /** Block n was scanned. If the scan had been held and that was mailed, say that it moved on. */
+  async noteFailedScanProgress(n, upTo) {
+    const st = this.failedScanStall;
+    if (!st || n < st.block) return;
+    this.failedScanStall = null;
+    this.log(`${this.network}: failed-transaction scan got past block ${st.block}`);
+    if (st.alerted) {
+      await this.mailer.send({
+        subject: `[${this.network}] failed-transaction scan moving again (block ${st.block} read)`,
+        text: `Block ${st.block} was read after ${Math.round((Date.now() - st.since) / 60000)} minutes. No block was skipped.\n`
+          + `Scan position: ${n} · blocks left to catch up: ${Math.max(0, upTo - n)}.\n`,
+      }).catch(() => {});
+    }
   }
 
   /**

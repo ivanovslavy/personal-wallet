@@ -89,8 +89,19 @@ single most useful thing a savings wallet can tell you. Each cycle reads its blo
 transactions, picks out those addressed to the wallet, checks the receipts for `status 0`, and
 replays the call at that block to **decode the revert reason**. The subject leads with the count:
 `[sepolia] 1 REFUSED + 2 events`. Verified live on both chains —
-`RecipientNotAllowed(0x3A9D…)`, `TokenNotAllowed(0x1111…)`, `BadTtl(60)`. Skipped on a long
-catch-up (over `MAX_FAILED_SCAN_BLOCKS`, default 300) rather than firing thousands of calls.
+`RecipientNotAllowed(0x3A9D…)`, `TokenNotAllowed(0x1111…)`, `BadTtl(60)`.
+
+🔴 **No block is ever skipped (2026-11-22).** The scan keeps its own position (`failedScanBlock` in the
+state file), trails the log scan by at most `MAX_FAILED_SCAN_BLOCKS` (default 300) per cycle and works a
+long catch-up off cycle by cycle — it used to skip the whole range. A block it cannot read **holds** the
+position there: retried every cycle, mailed once as `failed-transaction scan HELD at block N` after 15
+minutes, and once more when it moves on; the daily summary shows the scan's block and lag. Blocks are read
+**raw** (`eth_getBlockByNumber`), not through ethers' `getBlock(n, true)`: on 21.11.2026 one stranger's
+EIP-7702 transaction with an invalid authorization (`yParity 0xbc`, BSC block 134791636) made ethers reject
+the whole block on every endpoint — 728 "endpoint failures" in seven minutes, then a silent skip. ethers
+6.17.0 is the latest release, so upgrading is not a fix. Likewise an unreadable incoming-transfer range
+now fails the cycle (position not saved) instead of reading as "no arrivals".
+`listeners/test/failed-scan.test.js` covers all of it.
 
 Request cost, measured: gemba at a 20 s poll is ~42 calls/min against his own nodes; Sepolia at
 90 s is **8 calls/min** — fewer than the two-call version made at 60 s.
