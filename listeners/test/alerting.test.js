@@ -55,26 +55,78 @@ async function main() {
     ok("40 switches, 0 failures → 0 mails (counted: 40)");
   }
 
-  // 2) A real failure still gets through, and carries the switches with it.
+  // 2) 2026-11-22: a SINGLE failure (polygon publicnode timeout, 4 in a week, each one alone) mails
+  //    nobody — it is counted, per endpoint, into the daily summary.
   {
     const { w, sent } = makeWatcher();
     for (let i = 0; i < 40; i++) w.pool.onAnomaly({ type: "switched", from: "a", to: "b", round: 1 });
-    w.pool.onAnomaly({ type: "endpointFailed", endpoint: "publicnode", error: "timeout", round: 1 });
+    w.pool.onAnomaly({ type: "endpointFailed", endpoint: "publicnode", error: "request timeout", round: 1, consecutive: 1 });
+    w.pool.onAnomaly({ type: "endpointFailed", endpoint: "publicnode", error: "request timeout", round: 1, consecutive: 2 });
     await w.reportAnomalies();
-    assert.strictEqual(sent.length, 1, "a failure must send");
-    assert.match(sent[0].subject, /1 RPC failure\(s\), 40 switch\(es\)/);
-    ok(`1 real failure → 1 mail: "${sent[0].subject}"`);
+    assert.strictEqual(sent.length, 0, "one or two failures in a row must not mail");
+    assert.strictEqual(w.tally.byEndpoint.publicnode.count, 2);
+    ok("2 failures in a row → 0 mails, counted for the summary (publicnode: 2)");
   }
 
-  // 3) The rate limit still holds, so a flapping provider cannot flood.
+  // 3) The SAME endpoint failing 3 times in a row → one digest naming it, carrying the switches.
+  {
+    const { w, sent } = makeWatcher();
+    for (let i = 0; i < 40; i++) w.pool.onAnomaly({ type: "switched", from: "a", to: "b", round: 1 });
+    for (let c = 1; c <= 3; c++) w.pool.onAnomaly({ type: "endpointFailed", endpoint: "publicnode", error: "request timeout", round: 1, consecutive: c });
+    await w.reportAnomalies();
+    assert.strictEqual(sent.length, 1, "3 in a row must send");
+    assert.match(sent[0].subject, /publicnode down — 3\+ failures in a row/);
+    assert.match(sent[0].text, /Active endpoint changed \(40\)/);
+    ok(`3 in a row → 1 mail: "${sent[0].subject}"`);
+  }
+
+  // 3b) One mail per outage: more failures of the same endpoint do not mail again — until it has
+  //     answered (its streak back to 0) and then fails 3 in a row once more.
+  {
+    const stats = [{ label: "publicnode", failures: 5 }];
+    const { w, sent } = makeWatcher({ anomalyMailMs: 0 });
+    w.pool.stats = () => stats;
+    for (let c = 1; c <= 3; c++) w.pool.onAnomaly({ type: "endpointFailed", endpoint: "publicnode", error: "x", round: 1, consecutive: c });
+    await w.reportAnomalies();
+    for (let c = 4; c <= 9; c++) w.pool.onAnomaly({ type: "endpointFailed", endpoint: "publicnode", error: "x", round: 1, consecutive: c });
+    await w.reportAnomalies();
+    assert.strictEqual(sent.length, 1, "the same outage is mailed once");
+    stats[0].failures = 0;                       // it answered
+    await w.reportAnomalies();
+    for (let c = 1; c <= 3; c++) w.pool.onAnomaly({ type: "endpointFailed", endpoint: "publicnode", error: "x", round: 1, consecutive: c });
+    await w.reportAnomalies();
+    assert.strictEqual(sent.length, 2, "a new outage after recovery is mailed again");
+    ok("9 failures in one outage → 1 mail; recovered, then 3 in a row again → 2nd mail");
+  }
+
+  // 3c) Three failures spread over different endpoints are NOT a streak.
+  {
+    const { w, sent } = makeWatcher();
+    for (const ep of ["a", "b", "c"]) w.pool.onAnomaly({ type: "endpointFailed", endpoint: ep, error: "x", round: 1, consecutive: 1 });
+    await w.reportAnomalies();
+    assert.strictEqual(sent.length, 0);
+    ok("1 failure each on 3 endpoints → 0 mails");
+  }
+
+  // 3d) The rate limit still holds across endpoints, so a flapping provider cannot flood.
   {
     const { w, sent } = makeWatcher({ anomalyMailMs: 60_000 });
-    w.pool.onAnomaly({ type: "endpointFailed", endpoint: "a", error: "x", round: 1 });
+    for (let c = 1; c <= 3; c++) w.pool.onAnomaly({ type: "endpointFailed", endpoint: "a", error: "x", round: 1, consecutive: c });
     await w.reportAnomalies();
-    w.pool.onAnomaly({ type: "endpointFailed", endpoint: "a", error: "x", round: 1 });
+    for (let c = 1; c <= 3; c++) w.pool.onAnomaly({ type: "endpointFailed", endpoint: "b", error: "x", round: 1, consecutive: c });
     await w.reportAnomalies();
-    assert.strictEqual(sent.length, 1, "the second failure inside the window must wait");
-    ok("two failures inside the window → 1 mail (rate limit intact)");
+    assert.strictEqual(sent.length, 1, "a second outage inside the window must wait");
+    ok("two outages inside the window → 1 mail (rate limit intact)");
+  }
+
+  // 3e) The daily summary breaks single failures down per endpoint and error.
+  {
+    const { w, sent } = makeWatcher({ summaryMs: 1 });
+    for (let i = 0; i < 3; i++) w.pool.onAnomaly({ type: "endpointFailed", endpoint: "polygon-bor-rpc.publicnode.com", error: "request timeout", round: 1, consecutive: 1 });
+    w.lastSummaryMail = 0; await w.reportSummary();
+    assert.match(sent[0].subject, /3 RPC failure\(s\)/);
+    assert.match(sent[0].text, /polygon-bor-rpc\.publicnode\.com: 3 × request timeout \(3\)/);
+    ok("summary: 'polygon-bor-rpc.publicnode.com: 3 × request timeout (3)'");
   }
 
   // 4) MAIL_ON_SWITCH=true is honoured for people who do want every change.
@@ -152,7 +204,7 @@ async function main() {
 
   // Assert the count, do not just print it. A hardcoded "7" next to a growing list of cases is
   // how a test file quietly stops running half of itself.
-  const EXPECTED = 9;
+  const EXPECTED = 13;
   console.log(`\n  ${pass}/${EXPECTED} passed`);
   assert.strictEqual(pass, EXPECTED, `expected ${EXPECTED} checks, ran ${pass}`);
 }

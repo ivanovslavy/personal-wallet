@@ -79,6 +79,12 @@ class Watcher {
       // RPC anomalies are aggregated and sent at most this often, so a flapping endpoint cannot
       // turn the alerting into a flood.
       anomalyMailMs: 30 * 60_000,
+      // A failure digest goes out only when ONE endpoint has failed this many times IN A ROW — no good
+      // answer in between (2026-11-22). A single timeout is the fallback doing its job: it is counted
+      // into the daily summary, per endpoint, and mails nobody. With the pool's cooldown (2 min, then
+      // 4) three in a row means that endpoint gave no good answer for at least ~6 minutes. One mail
+      // per outage: the endpoint is not mailed again until it has answered at least once.
+      endpointAlertAfter: 3,
       // ONE HEARTBEAT PER DAY, carrying the counters. Set to 0 to send none. This is the only
       // mail that goes out when nothing is wrong — everything else is triggered by an event.
       summaryMs: 24 * 60 * 60_000,
@@ -96,15 +102,27 @@ class Watcher {
     this.lastAnomalyMail = 0;
     this.failedScanStall = null;   // { block, since, error, alerted } while the scan is held at a block
     // Running counters for the daily heartbeat. Switches land here instead of in an email.
-    this.tally = { switches: 0, failures: 0, since: new Date().toISOString() };
+    this.tally = { switches: 0, failures: 0, byEndpoint: {}, since: new Date().toISOString() };
     this.lastSummaryMail = Date.now();
+    this.endpointAlerted = new Set();   // endpoints already mailed for their current outage
 
     // The pool reports; the watcher decides. Collected here and mailed on a timer rather than
     // one message per event.
     this.pool.onAnomaly = (a) => {
       if (a.type === "switched") this.tally.switches++;
-      if (a.type === "endpointFailed") this.tally.failures++;
-      this.anomalies.push({ ...a, at: new Date().toISOString() });
+      let streak = false;
+      if (a.type === "endpointFailed") {
+        this.tally.failures++;
+        const b = (this.tally.byEndpoint[a.endpoint] ||= { count: 0, errors: {} });
+        b.count++;
+        const k = String(a.error || "?").slice(0, 60);
+        b.errors[k] = (b.errors[k] || 0) + 1;
+        if ((a.consecutive || 0) >= this.endpointAlertAfter && !this.endpointAlerted.has(a.endpoint)) {
+          this.endpointAlerted.add(a.endpoint);
+          streak = true;
+        }
+      }
+      this.anomalies.push({ ...a, streak, at: new Date().toISOString() });
       if (this.anomalies.length > 50) this.anomalies.splice(0, this.anomalies.length - 50);
     };
   }
@@ -204,10 +222,13 @@ class Watcher {
    * "allFailed" and "cannot read the chain" have their own, louder mails and are not folded in.
    */
   async reportAnomalies() {
+    // An endpoint that was mailed and has answered since (its streak is back to 0) may be mailed again.
+    for (const s of (this.pool.stats?.() || [])) if (s.failures === 0) this.endpointAlerted.delete(s.label);
     if (this.anomalies.length === 0) return;
-    const hasFailure = this.anomalies.some((a) => a.type === "endpointFailed");
-    if (!hasFailure && !this.mailOnSwitch) {
-      // Nothing failed. Keep the events for the daily heartbeat's context and send no mail.
+    const hasStreak = this.anomalies.some((a) => a.type === "endpointFailed" && a.streak);
+    if (!hasStreak && !this.mailOnSwitch) {
+      // No endpoint failed endpointAlertAfter times in a row: single failures and switches go to the
+      // daily summary only. Keep the last 50 for context and send no mail.
       if (this.anomalies.length > 50) this.anomalies.splice(0, this.anomalies.length - 50);
       return;
     }
@@ -217,10 +238,12 @@ class Watcher {
     const items = this.anomalies.splice(0, this.anomalies.length);
     const switched = items.filter((a) => a.type === "switched");
     const failed = items.filter((a) => a.type === "endpointFailed");
+    const down = [...new Set(items.filter((a) => a.streak).map((a) => a.endpoint))];
     if (failed.length === 0 && !this.mailOnSwitch) return;
 
     const lines = [
       `${items.length} RPC anomal${items.length === 1 ? "y" : "ies"} on ${this.network}.`,
+      ...(down.length ? [`${down.join(", ")} failed ${this.endpointAlertAfter} or more times in a row (no good answer in between).`] : []),
       `The listener kept working — this is the fallback doing its job, reported so a provider`,
       `that is quietly degrading does not go unnoticed.`,
       "",
@@ -244,7 +267,9 @@ class Watcher {
 
     this.lastAnomalyMail = Date.now();
     await this.mailer.send({
-      subject: `[${this.network}] ${failed.length} RPC failure(s), ${switched.length} switch(es)`,
+      subject: down.length
+        ? `[${this.network}] ${down.join(", ")} down — ${this.endpointAlertAfter}+ failures in a row`
+        : `[${this.network}] ${failed.length} RPC failure(s), ${switched.length} switch(es)`,
       text: lines.join("\n"),
     });
   }
@@ -271,7 +296,9 @@ class Watcher {
       `failed-tx scan  : ${this.watchFailed ? `block ${this.state.data.failedScanBlock ?? "-"} (${this.state.data.failedScanBlock == null ? "not started" : `${this.state.data.lastBlock - this.state.data.failedScanBlock} behind`})${this.failedScanStall ? ` · HELD at ${this.failedScanStall.block}` : ""}` : "off"}`,
       `events seen     : ${this.state.data.eventsSeen}`,
       `alerts sent     : ${this.state.data.alertsSent}`,
-      `rpc failures    : ${t.failures}`,
+      `rpc failures    : ${t.failures}${t.failures ? "   (single failures mail nobody; the fallback served them)" : ""}`,
+      ...Object.entries(t.byEndpoint || {}).map(([ep, b]) =>
+        `                  ${ep}: ${b.count} × ${Object.entries(b.errors).map(([m, n]) => `${m}${n > 1 ? ` (${n})` : ""}`).join("; ")}`),
       `endpoint changes: ${t.switches}   (routing between call types — not a fault)`,
       `active endpoint : ${this.pool.current || "unknown"}`,
       `poll interval   : ${this.pollMs / 1000} s · confirmations ${this.confirmations}`,
@@ -279,7 +306,7 @@ class Watcher {
       `Endpoint status:\n${JSON.stringify(this.pool.stats(), null, 2)}`,
     ];
     this.lastSummaryMail = Date.now();
-    this.tally = { switches: 0, failures: 0, since: new Date().toISOString() };
+    this.tally = { switches: 0, failures: 0, byEndpoint: {}, since: new Date().toISOString() };
     await this.mailer.send({
       subject: `[${this.network}] daily summary — ${health}, block ${this.state.data.lastBlock}`,
       text: lines.join("\n"),

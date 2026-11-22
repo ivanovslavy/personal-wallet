@@ -194,7 +194,8 @@ class RpcPool {
           e.failedUntil = Date.now() + this.cooldownMs * Math.min(e.failures, 5);
           tried.push(`round ${round} · ${e.label}: ${e.lastError}`);
           this.log(`${this.name}: ${e.label} failed, moving on`, { error: e.lastError, round });
-          this.onAnomaly({ type: "endpointFailed", endpoint: e.label, error: e.lastError, round });
+          // `consecutive` = failures of THIS endpoint since its last good answer (e.failures resets on success)
+          this.onAnomaly({ type: "endpointFailed", endpoint: e.label, error: e.lastError, round, consecutive: e.failures });
         } finally {
           try { provider?.destroy(); } catch { /* nothing to do */ }
         }

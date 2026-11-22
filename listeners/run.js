@@ -88,6 +88,7 @@ async function main() {
     anomalyMailMs: cfg.anomalyMailMs,
     summaryMs: cfg.summaryMs,
     mailOnSwitch: cfg.mailOnSwitch,
+    endpointAlertAfter: cfg.endpointAlertAfter,
     log,
   });
 

@@ -35,6 +35,7 @@ For a network called `<net>`, the prefix is its name upper-cased with non-alphan
 | `<NET>_ANOMALY_MAIL_MS` | how often a **failure** digest may go out (default 30 min) |
 | `<NET>_SUMMARY_MS` | one heartbeat per period, `0` for none (default 24 h) |
 | `<NET>_MAIL_ON_SWITCH` | `true` to also mail the moment the active endpoint changes (default `false`) |
+| `<NET>_ENDPOINT_ALERT_AFTER` | failures **in a row** of one endpoint before a failure digest is mailed (default 3) |
 
 Mail is global: `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`, `MAIL_FROM`, `MAIL_TO`.
 
@@ -60,11 +61,18 @@ classes overwrote each other twice per cycle and each overwrite was reported as 
 2. The digest goes out **only when an endpoint actually failed**. Switch counts ride along inside
    that digest and in the daily heartbeat; `<NET>_MAIL_ON_SWITCH=true` restores live reporting
    for anyone who wants it.
+3. **2026-11-22: and only when ONE endpoint failed `ENDPOINT_ALERT_AFTER` (3) times in a row**, with no
+   good answer in between. A single timeout is the fallback doing its job (polygon's publicnode: four in a
+   week, each alone, each one a mail). It is counted per endpoint and error in the daily heartbeat
+   (`polygon-bor-rpc.publicnode.com: 3 × request timeout (3)`). With the pool's cooldown (2 min, then 4),
+   three in a row means at least ~6 minutes without a good answer. One mail per outage — subject
+   `[<net>] <endpoint> down — 3+ failures in a row` — and none again for that endpoint until it has answered.
 
 | what happens | what arrives |
 |---|---|
 | a wallet event, an arriving token, a **refused** transaction | immediately, one mail per batch |
-| an endpoint **fails** | failure digest, at most once per `ANOMALY_MAIL_MS` |
+| an endpoint fails once or twice | nothing — counted per endpoint in the daily heartbeat |
+| one endpoint fails **3 times in a row** | "<endpoint> down" digest, once per outage, at most once per `ANOMALY_MAIL_MS` |
 | the active endpoint merely changes | nothing — counted only |
 | **every** endpoint fails every round | its own louder mail, not rate-limited |
 | five cycles in a row fail | "listener cannot read the chain" |

@@ -138,6 +138,8 @@ function networkConfig(net) {
     anomalyMailMs: Number(cfg(net, "ANOMALY_MAIL_MS", String(30 * 60_000))),
     summaryMs: Number(cfg(net, "SUMMARY_MS", String(24 * 60 * 60_000))),
     mailOnSwitch: asBool(cfg(net, "MAIL_ON_SWITCH"), false),
+    //   <NET>_ENDPOINT_ALERT_AFTER  failures IN A ROW of one endpoint before a digest is mailed (default 3)
+    endpointAlertAfter: Number(cfg(net, "ENDPOINT_ALERT_AFTER", "3")),
     addresses: watch,
     endpoints: eps,
   };
