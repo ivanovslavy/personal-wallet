@@ -87,6 +87,8 @@ async function main() {
     maxFailedScanBlocks: cfg.maxFailedScanBlocks,
     anomalyMailMs: cfg.anomalyMailMs,
     summaryMs: cfg.summaryMs,
+    policyCheckMs: cfg.policyCheckMs,
+    policyRemindMs: cfg.policyRemindMs,
     mailOnSwitch: cfg.mailOnSwitch,
     endpointAlertAfter: cfg.endpointAlertAfter,
     log,

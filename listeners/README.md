@@ -164,6 +164,28 @@ systemctl list-timers 'personal-wallet-*'
 | RPC failures and endpoint switches | aggregated, at most one digest every 30 minutes |
 | listener **stopped** | on a clean shutdown — a listener that goes quiet is indistinguishable from one that is fine |
 | watchdog restarted something | whenever it had to act |
+| **POLICY ALARM** — an open `SET_POLICY` proposal | on sight, at every stage change, and again every 6 h until it is executed, cancelled or expired |
+| policy alarm cannot read the wallet / reading again | once after six failed checks in a row, once when it reads again |
+
+### The policy alarm (2026-11-27)
+Every 10 minutes (`<NET>_POLICY_CHECK_MS`, `0` = off) the listener reads the wallet's proposals that are
+not yet final and mails every open `SET_POLICY` (`<NET>_POLICY_REMIND_MS`, default 6 h, for the reminder).
+Why a plain event mail is not enough: whether a policy proposal is timelocked is decided when it is
+**proposed**, but its absolute values are written when it is **executed**. A confirmed "tightening"
+proposal left open can therefore set the policy back **instantly** — no timelock, no veto — once the
+policy has been tightened by another proposal, and a confirmed non-timelocked proposal can be neither
+cancelled nor vetoed; it only expires after 7 days. The rule that follows: execute a policy change
+right after confirming it, and never tighten while another policy proposal is open.
+
+| stage in the subject | what it means | what to do |
+|---|---|---|
+| `AWAITING CONFIRMATION` | proposed, 1 of 2 | confirm only if you execute right after; not yours → do not confirm |
+| `CONFIRMED NOT EXECUTED` | confirmed, not timelocked, cannot be cancelled | yours → **execute now**; not yours → two keys are compromised |
+| `LOOSENING SCHEDULED` | loosens, timelocked | not yours → **veto** before it takes effect (any single owner) |
+
+Plain event mails now name the proposal kind (`SET_POLICY (10)` instead of `10`) and lead with
+`POLICY CHANGE +` when a policy proposal or `PolicyChanged` is among them. The daily summary carries
+a `policy alarm` line. Tested against the real contract: `npx hardhat test test/09-listener-policy-alarm.js`.
 
 Endpoint switching is normal, successful behaviour; it is reported so a provider that is quietly
 degrading becomes visible, not because anything is broken. The digest is rate-limited so a

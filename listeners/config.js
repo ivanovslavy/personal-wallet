@@ -135,8 +135,12 @@ function networkConfig(net) {
     //   <NET>_ANOMALY_MAIL_MS  how often a FAILURE digest may go out        (default 30 min)
     //   <NET>_SUMMARY_MS       the one-per-period heartbeat, 0 = none       (default 24 h)
     //   <NET>_MAIL_ON_SWITCH   mail the moment the active endpoint changes  (default false)
+    //   <NET>_POLICY_CHECK_MS  how often open SET_POLICY proposals are read, 0 = off (default 10 min)
+    //   <NET>_POLICY_REMIND_MS how often an open SET_POLICY proposal is mailed again  (default 6 h)
     anomalyMailMs: Number(cfg(net, "ANOMALY_MAIL_MS", String(30 * 60_000))),
     summaryMs: Number(cfg(net, "SUMMARY_MS", String(24 * 60 * 60_000))),
+    policyCheckMs: Number(cfg(net, "POLICY_CHECK_MS", String(10 * 60_000))),
+    policyRemindMs: Number(cfg(net, "POLICY_REMIND_MS", String(6 * 60 * 60_000))),
     mailOnSwitch: asBool(cfg(net, "MAIL_ON_SWITCH"), false),
     //   <NET>_ENDPOINT_ALERT_AFTER  failures IN A ROW of one endpoint before a digest is mailed (default 3)
     endpointAlertAfter: Number(cfg(net, "ENDPOINT_ALERT_AFTER", "3")),

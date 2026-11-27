@@ -33,6 +33,10 @@ const LOGS_TIMEOUT_MS = 60_000;
 const TOPIC_TRANSFER = "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef";        // ERC-20 and ERC-721
 const TOPIC_1155_SINGLE = "0xc3d58168c5ae7397731d063d5bbf3d657854427343f4c083240f7aacaa2d0f62";
 const TOPIC_1155_BATCH = "0x4a39dc06d4c0dbc64b70af90fd698a233a518aa5d07e595d983b8c0526c8f7fb";
+// Proposal.kind, in the enum order of PersonalWallet.sol — mails name the kind instead of printing a number.
+const KIND_NAMES = ["NATIVE", "ERC20", "ERC721", "ERC1155", "NFT_BATCH", "OWNER_REPLACE", "ALLOW_TOKEN",
+  "REVOKE_TOKEN", "ALLOW_RECIPIENT", "REVOKE_RECIPIENT", "SET_POLICY"];
+const SET_POLICY = 10;
 const pad32 = (addr) => "0x" + addr.toLowerCase().replace(/^0x/, "").padStart(64, "0");
 
 class Watcher {
@@ -91,6 +95,16 @@ class Watcher {
       // A real endpoint change is already described in the failure digest that caused it. Turn
       // this on to also get it the moment it happens.
       mailOnSwitch: false,
+      // 🔴 THE POLICY ALARM (2026-11-27, audit 26.11 PersonalWallet F1). Whether a SET_POLICY proposal
+      // is timelocked is decided when it is PROPOSED, but its absolute values are written when it is
+      // EXECUTED. A confirmed "tightening" proposal left open therefore becomes a way to LOOSEN the
+      // policy instantly — no timelock, no veto — as soon as the policy is tightened by another one.
+      // A confirmed, non-timelocked proposal cannot be cancelled or vetoed; it only expires (7 days).
+      // The event mail alone is one message that is easy to miss, so every policyCheckMs the wallet's
+      // open proposals are read from the chain, and every open SET_POLICY is mailed on sight and again
+      // every policyRemindMs until it is executed, cancelled or expired. 0 switches the check off.
+      policyCheckMs: 10 * 60_000,
+      policyRemindMs: 6 * 60 * 60_000,
       log: () => {},
     }, o);
     this.addresses = o.addresses.map((a) => a.toLowerCase());
@@ -105,6 +119,10 @@ class Watcher {
     this.tally = { switches: 0, failures: 0, byEndpoint: {}, since: new Date().toISOString() };
     this.lastSummaryMail = Date.now();
     this.endpointAlerted = new Set();   // endpoints already mailed for their current outage
+    this.lastPolicyCheck = 0;
+    this.policyCheckFailures = 0;
+    this.policyCheckOkAt = null;
+    this.openPolicy = [];               // the open SET_POLICY proposals seen by the last check
 
     // The pool reports; the watcher decides. Collected here and mailed on a timer rather than
     // one message per event.
@@ -188,6 +206,7 @@ class Watcher {
       }
 
       await this.reportAnomalies();
+      await this.checkPolicy();
       await this.reportSummary();
       const wait = this.inBackoff ? this.backoffMs : this.pollMs;
       if (this.inBackoff) this.log(`${this.network}: backing off for ${wait / 60000} minutes before retrying`);
@@ -286,7 +305,8 @@ class Watcher {
 
     const t = this.tally;
     const hours = ((Date.now() - new Date(t.since).getTime()) / 3_600_000).toFixed(1);
-    const health = (t.failures === 0 ? "healthy" : `${t.failures} RPC failure(s)`)
+    const health = (this.openPolicy.length ? `${this.openPolicy.length} OPEN POLICY PROPOSAL(S) · ` : "")
+      + (t.failures === 0 ? "healthy" : `${t.failures} RPC failure(s)`)
       + (this.failedScanStall ? ` · failed-tx scan HELD at ${this.failedScanStall.block}` : "");
     const lines = [
       `${this.network} listener is alive. Nothing here needs action unless a number looks wrong.`,
@@ -299,6 +319,7 @@ class Watcher {
       `rpc failures    : ${t.failures}${t.failures ? "   (single failures mail nobody; the fallback served them)" : ""}`,
       ...Object.entries(t.byEndpoint || {}).map(([ep, b]) =>
         `                  ${ep}: ${b.count} × ${Object.entries(b.errors).map(([m, n]) => `${m}${n > 1 ? ` (${n})` : ""}`).join("; ")}`),
+      `policy alarm    : ${!this.policyCheckMs ? "off" : this.policyCheckOkAt == null ? "not read yet" : this.openPolicy.length ? `${this.openPolicy.length} OPEN SET_POLICY proposal(s): ${this.openPolicy.map((f) => `#${f.id} ${f.stage}`).join(", ")}` : "no open SET_POLICY proposal"}${this.policyCheckFailures ? ` · last ${this.policyCheckFailures} read(s) failed` : ""}`,
       `endpoint changes: ${t.switches}   (routing between call types — not a fault)`,
       `active endpoint : ${this.pool.current || "unknown"}`,
       `poll interval   : ${this.pollMs / 1000} s · confirmations ${this.confirmations}`,
@@ -583,6 +604,120 @@ class Watcher {
     }
   }
 
+  /**
+   * The policy alarm (see policyCheckMs). Reads every proposal that is not yet final and mails each
+   * open SET_POLICY proposal — on first sight, when its stage changes, and every policyRemindMs after.
+   * A read error is retried at the next check; six failed checks in a row are mailed once.
+   */
+  async checkPolicy() {
+    if (!this.policyCheckMs) return;
+    if (Date.now() - this.lastPolicyCheck < this.policyCheckMs) return;
+    this.lastPolicyCheck = Date.now();
+    let open;
+    try {
+      open = [];
+      for (const addr of this.addresses) open.push(...await this.readOpenPolicy(addr));
+    } catch (e) {
+      this.policyCheckFailures++;
+      const msg = String(e.message || e).slice(0, 600);
+      this.log(`${this.network}: policy check failed (${this.policyCheckFailures} in a row)`, { error: msg });
+      if (this.policyCheckFailures === 6) {
+        await this.mailer.send({
+          subject: `[${this.network}] policy alarm cannot read the wallet`,
+          text: `The check for open SET_POLICY proposals failed ${this.policyCheckFailures} times in a row`
+            + ` (every ${this.policyCheckMs / 60000} min). Until it reads again, an open policy proposal would`
+            + ` NOT be reminded — the plain event mail still goes out.\n\nLast error:\n${msg}\n`,
+        });
+      }
+      return;
+    }
+    if (this.policyCheckFailures >= 6) {
+      await this.mailer.send({ subject: `[${this.network}] policy alarm reading again`, text: `The policy check reads the wallet again.\n` });
+    }
+    this.policyCheckFailures = 0;
+    this.policyCheckOkAt = new Date().toISOString();
+    this.openPolicy = open;
+
+    const prev = this.state.data.policyAlerts || {};
+    const next = {};
+    const due = [];
+    for (const f of open) {
+      const key = `${f.address}#${f.id}`;
+      const p = prev[key];
+      next[key] = p && p.stage === f.stage ? { ...p } : { stage: f.stage, at: 0 };
+      if (Date.now() - next[key].at >= this.policyRemindMs) due.push(f);
+    }
+    if (due.length) {
+      const ok = await this.mailer.send(this.composePolicy(due));
+      if (ok) for (const f of due) next[`${f.address}#${f.id}`].at = Date.now();
+    }
+    this.state.set({ policyAlerts: next });
+  }
+
+  /** Open SET_POLICY proposals of one wallet. Proposals already final are not read again. */
+  async readOpenPolicy(addr) {
+    return this.pool.withProvider(async (p) => {
+      const { Contract } = require("ethers");
+      const c = new Contract(addr, this.iface, p);
+      const now = Number((await p.getBlock("latest")).timestamp);
+      const count = Number(await c.proposalCount());
+      const from = (this.state.data.policyScanFrom || {})[addr] || 1;
+      let firstOpen = null;
+      const out = [];
+      for (let id = from; id <= count; id++) {
+        const q = await c.getProposal(id);
+        const final = q.executed || q.cancelled || Number(q.expiresAt) < now;
+        if (!final && firstOpen == null) firstOpen = id;
+        if (final || Number(q.kind) !== SET_POLICY) continue;
+        const confirmations = Number(await c.confirmations(id));
+        const effectiveAt = Number(await c.effectiveAt(id));
+        out.push({
+          address: addr, id, confirmations, effectiveAt, now,
+          stage: effectiveAt !== 0 ? "LOOSENING_SCHEDULED" : confirmations >= 2 ? "CONFIRMED_NOT_EXECUTED" : "AWAITING_CONFIRMATION",
+          expiresAt: Number(q.expiresAt), proposer: q.proposer,
+          newDelayHours: Number(q.value) / 3600,
+          reqRecipient: (Number(q.amount) & 1) !== 0, reqToken: (Number(q.amount) & 2) !== 0,
+        });
+      }
+      this.state.set({ policyScanFrom: { ...(this.state.data.policyScanFrom || {}), [addr]: firstOpen ?? count + 1 } });
+      return out;
+    });
+  }
+
+  composePolicy(due) {
+    const at = (t) => new Date(t * 1000).toISOString().replace("T", " ").slice(0, 16) + " UTC";
+    const worst = due.find((f) => f.stage === "CONFIRMED_NOT_EXECUTED") || due.find((f) => f.stage === "LOOSENING_SCHEDULED") || due[0];
+    const lines = [`${due.length} open SET_POLICY proposal(s) on ${this.network}.`, ""];
+    for (const f of due) {
+      lines.push(`#${f.id}  ${f.stage}`);
+      lines.push(`  wallet   : ${f.address}`);
+      lines.push(`  proposer : ${f.proposer}`);
+      lines.push(`  sets     : delay ${f.newDelayHours} h · recipient allowlist ${f.reqRecipient ? "ON" : "OFF"} · token allowlist ${f.reqToken ? "ON" : "OFF"}`);
+      lines.push(`  confirmed: ${f.confirmations} of 2`);
+      if (f.stage === "CONFIRMED_NOT_EXECUTED") {
+        lines.push(`  ANY owner can execute it until ${at(f.expiresAt)}. It can NOT be cancelled or vetoed — it only expires.`);
+        lines.push(`  While it is open, do NOT tighten the policy with another proposal: executing this one afterwards`);
+        lines.push(`  would set these values back INSTANTLY, with no timelock and no veto (audit 26.11.2026, F1).`);
+        lines.push(`  -> If it is yours: EXECUTE IT NOW (executeSetPolicy(${f.id})).`);
+        lines.push(`  -> If it is not yours: two owner keys are compromised.`);
+      } else if (f.stage === "LOOSENING_SCHEDULED") {
+        lines.push(`  It LOOSENS the policy and takes effect at ${at(f.effectiveAt)} (window until ${at(f.expiresAt)}).`);
+        lines.push(`  -> If it is not yours: VETO IT before then — any single owner can (veto(${f.id})).`);
+      } else {
+        lines.push(`  Proposed, waiting for a second confirmation (open until ${at(f.expiresAt)}).`);
+        lines.push(`  -> Confirm it only if it is executed right after. Once confirmed it can no longer be cancelled.`);
+        lines.push(`  -> If it is not yours: do NOT confirm; the proposer's key is compromised.`);
+      }
+      if (this.explorer) lines.push(`  explorer : ${this.explorer}/address/${f.address}`);
+      lines.push("");
+    }
+    lines.push(`Reminded every ${this.policyRemindMs / 3_600_000} h until each proposal is executed, cancelled or expired.`);
+    return {
+      subject: `[${this.network}] POLICY ALARM: SET_POLICY #${worst.id} ${worst.stage.replace(/_/g, " ")}${due.length > 1 ? ` +${due.length - 1} more` : ""}`,
+      text: lines.join("\n"),
+    };
+  }
+
   decode(l) {
     const base = {
       address: l.address,
@@ -598,6 +733,7 @@ class Watcher {
         const v = p.args[i];
         args[inp.name || `arg${i}`] = typeof v === "bigint" ? v.toString() : String(v);
       });
+      if (args.kind !== undefined && KIND_NAMES[Number(args.kind)]) args.kind = `${KIND_NAMES[Number(args.kind)]} (${args.kind})`;
       return { ...base, name: p.name, args };
     } catch {
       return { ...base, name: "(undecodable)", args: { topic0: l.topics[0] } };
@@ -617,7 +753,8 @@ class Watcher {
     const names = [...new Set(events.map((e) => e.name))];
     // A refusal leads the subject: it is the line that should make someone look.
     const refused = events.filter((e) => e.name.startsWith("REFUSED")).length;
-    const prefix = refused ? `${refused} REFUSED + ` : "";
+    const policy = events.some((e) => e.name === "PolicyChanged" || String(e.args.kind || "").startsWith("SET_POLICY"));
+    const prefix = (policy ? "POLICY CHANGE + " : "") + (refused ? `${refused} REFUSED + ` : "");
     const subject = `[${this.network}] ${prefix}${events.length} event${events.length > 1 ? "s" : ""}: ${names.slice(0, 3).join(", ")}${names.length > 3 ? ` +${names.length - 3} more` : ""}`;
     const lines = [
       `${events.length} event(s) on ${this.network}`,
